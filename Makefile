@@ -12,7 +12,7 @@ PKG      := wb-mixing-groups
 #   тег v1.2.3            -> 1.2.3
 #   3 коммита после тега  -> 1.2.3+3+gabc1234
 #   тегов ещё нет         -> 0.0.0+gabc1234
-#版本 в Debian обязана начинаться с цифры, поэтому голый хеш коммита
+# Версия в Debian обязана начинаться с цифры, поэтому голый хеш коммита
 # (а без тегов git describe отдаёт именно его) не годится.
 GITDESC  := $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//; s/-/+/g')
 VERSION  := $(shell echo "$(GITDESC)" | grep -qE '^[0-9]' \
