@@ -176,7 +176,9 @@ install_files() {
   install -m 0644 "$SRC/etc/wb-mixing-groups.conf" "$SHARE_DIR/wb-mixing-groups.conf.dist"
   [ -f "$SRC/etc/wb-mixing-groups.conf.example" ] &&
     install -m 0644 "$SRC/etc/wb-mixing-groups.conf.example" "$SHARE_DIR/" || true
-  [ -f "$SRC/README.md" ] && install -m 0644 "$SRC/README.md" "$SHARE_DIR/" || true
+  for d in README.md PROMPT.md; do
+    [ -f "$SRC/$d" ] && install -m 0644 "$SRC/$d" "$SHARE_DIR/" || true
+  done
 }
 
 install_config() {

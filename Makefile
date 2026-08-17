@@ -75,7 +75,7 @@ deb: clean
 	@install -m 0644 etc/wb-mixing-groups.conf $(BUILD)/etc/
 	@install -m 0644 usr/share/wb-mqtt-confed/schemas/*.json \
 		$(BUILD)/usr/share/wb-mqtt-confed/schemas/
-	@install -m 0644 README.md $(BUILD)/usr/share/wbmix/
+	@install -m 0644 README.md PROMPT.md $(BUILD)/usr/share/wbmix/
 	@install -m 0644 etc/wb-mixing-groups.conf.example $(BUILD)/usr/share/wbmix/
 	@echo "$(VERSION)" > $(BUILD)/usr/share/wbmix/VERSION
 	@printf 'Package: %s\n' "$(PKG)"                        >  $(BUILD)/DEBIAN/control
