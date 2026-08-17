@@ -8,8 +8,16 @@
 #   make deploy HOST=192.168.1.50    залить и установить по ssh
 
 PKG      := wb-mixing-groups
-# Тег v1.2.3 -> версия пакета 1.2.3: в Debian версия не должна начинаться с буквы
-VERSION  := $(shell git describe --tags --always 2>/dev/null | sed 's/^v//' || echo 1.0.0)
+# Версия пакета из git.
+#   тег v1.2.3            -> 1.2.3
+#   3 коммита после тега  -> 1.2.3+3+gabc1234
+#   тегов ещё нет         -> 0.0.0+gabc1234
+#版本 в Debian обязана начинаться с цифры, поэтому голый хеш коммита
+# (а без тегов git describe отдаёт именно его) не годится.
+GITDESC  := $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//; s/-/+/g')
+VERSION  := $(shell echo "$(GITDESC)" | grep -qE '^[0-9]' \
+              && echo "$(GITDESC)" \
+              || echo "0.0.0+$(if $(GITDESC),$(GITDESC),local)")
 # Architecture: all — внутри только JavaScript и JSON, один и тот же
 # пакет ставится и на WB6/7 (armhf), и на WB8 (arm64)
 DEB      := $(PKG)_$(VERSION)_all.deb
@@ -35,7 +43,7 @@ sim:
 	@node test/sim.js
 
 build:
-	@node build/make-bundle.js
+	@node tools/make-bundle.js
 
 install:
 	@./install.sh

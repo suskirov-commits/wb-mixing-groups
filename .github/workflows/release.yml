@@ -44,7 +44,7 @@ jobs:
 
       - name: Проверить, что однофайловая сборка соответствует исходникам
         run: |
-          node build/make-bundle.js
+          node tools/make-bundle.js
           git diff --exit-code dist/ || {
             echo "::error::dist/wb-mixing-groups.js устарел — выполните 'make build' и закоммитьте"
             exit 1

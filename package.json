@@ -4,7 +4,7 @@
   "description": "Управление смесительными узлами на Wiren Board (wb-rules)",
   "private": true,
   "scripts": {
-    "build": "node build/make-bundle.js",
+    "build": "node tools/make-bundle.js",
     "test": "node test/actuator.js && node test/faults.js && node test/bundle.js && node test/schema.js",
     "sim": "node test/sim.js"
   },
