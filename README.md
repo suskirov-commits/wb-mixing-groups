@@ -14,7 +14,7 @@
 
 ```sh
 # на контроллере
-wget https://github.com/<owner>/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
+wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
 dpkg -i wb-mixing-groups_all.deb
 ```
 
@@ -91,7 +91,7 @@ T_смесь = k · T_вход + (1 − k) · T_обратка
 На контроллере, две строки:
 
 ```sh
-wget https://github.com/<owner>/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
+wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
 dpkg -i wb-mixing-groups_all.deb
 ```
 
@@ -129,7 +129,7 @@ git tag v1.0.0 && git push --tags
 
 ```sh
 apt-get update && apt-get install -y git
-git clone https://github.com/<owner>/wb-mixing-groups.git /opt/wbmix
+git clone https://github.com/suskirov-commits/wb-mixing-groups.git /opt/wbmix
 /opt/wbmix/install.sh
 ```
 

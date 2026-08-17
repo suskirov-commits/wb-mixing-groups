@@ -273,7 +273,7 @@ T_под = T_пом + ΔT_ср + ΔT_к / 2
 ср. [wb-engine](https://github.com/4mr/wb-engine)):
 
 ```sh
-wget https://github.com/<owner>/<repo>/releases/latest/download/wb-mixing-groups_all.deb
+wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
 dpkg -i wb-mixing-groups_all.deb
 ```
 

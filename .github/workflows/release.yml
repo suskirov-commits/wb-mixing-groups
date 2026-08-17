@@ -6,7 +6,7 @@ name: release
 #
 # После этого на контроллере:
 #
-#   wget https://github.com/<owner>/<repo>/releases/latest/download/wb-mixing-groups_all.deb
+#   wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
 #   dpkg -i wb-mixing-groups_all.deb
 
 on:
