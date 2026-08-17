@@ -1,0 +1,15 @@
+{
+  "name": "wbmix",
+  "version": "1.0.0",
+  "description": "Управление смесительными узлами на Wiren Board (wb-rules)",
+  "private": true,
+  "scripts": {
+    "build": "node build/make-bundle.js",
+    "test": "node test/actuator.js && node test/faults.js && node test/bundle.js && node test/schema.js",
+    "sim": "node test/sim.js"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-draft-04": "^1.0.0"
+  }
+}

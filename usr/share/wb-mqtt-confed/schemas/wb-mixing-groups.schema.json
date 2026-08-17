@@ -1,0 +1,1381 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "mixingGroupsTitle",
+  "description": "mixingGroupsDescription",
+  "configFile": {
+    "path": "/etc/wb-mixing-groups.conf",
+    "service": "wb-rules"
+  },
+  "definitions": {
+    "tristateActuator": {
+      "type": "object",
+      "title": "actTristateTitle",
+      "description": "actTristateDescription",
+      "_format": "grid",
+      "options": {
+        "disable_collapse": true,
+        "disable_edit_json": true
+      },
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "tristate"
+          ],
+          "default": "tristate",
+          "options": {
+            "hidden": true
+          }
+        },
+        "open": {
+          "type": "string",
+          "pattern": "^$|^[^/+#]+/[^/+#]+$",
+          "minLength": 0,
+          "_format": "wb-autocomplete",
+          "options": {
+            "patternmessage": "errMqttTopic",
+            "inputAttributes": {
+              "placeholder": "phMqttTopic"
+            },
+            "wb": {
+              "data": "devices"
+            },
+            "grid_columns": 6
+          },
+          "title": "actOpenTitle",
+          "description": "actOpenDescription",
+          "propertyOrder": 1
+        },
+        "close": {
+          "type": "string",
+          "pattern": "^$|^[^/+#]+/[^/+#]+$",
+          "minLength": 0,
+          "_format": "wb-autocomplete",
+          "options": {
+            "patternmessage": "errMqttTopic",
+            "inputAttributes": {
+              "placeholder": "phMqttTopic"
+            },
+            "wb": {
+              "data": "devices"
+            },
+            "grid_columns": 6
+          },
+          "title": "actCloseTitle",
+          "description": "actCloseDescription",
+          "propertyOrder": 2
+        },
+        "travelTime": {
+          "type": "number",
+          "title": "actTravelTimeTitle",
+          "description": "actTravelTimeDescription",
+          "minimum": 5,
+          "maximum": 600,
+          "default": 120,
+          "propertyOrder": 3,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "travelTimeClose": {
+          "type": "number",
+          "title": "actTravelTimeCloseTitle",
+          "description": "actTravelTimeCloseDescription",
+          "minimum": 5,
+          "maximum": 600,
+          "default": 120,
+          "propertyOrder": 4,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "minPulse": {
+          "type": "integer",
+          "title": "actMinPulseTitle",
+          "description": "actMinPulseDescription",
+          "minimum": 100,
+          "maximum": 5000,
+          "default": 500,
+          "propertyOrder": 5,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "deadband": {
+          "type": "number",
+          "title": "actDeadbandTitle",
+          "description": "actDeadbandDescription",
+          "minimum": 0.2,
+          "maximum": 20,
+          "default": 1.5,
+          "propertyOrder": 6,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "interlock": {
+          "type": "integer",
+          "title": "actInterlockTitle",
+          "description": "actInterlockDescription",
+          "minimum": 0,
+          "maximum": 5000,
+          "default": 300,
+          "propertyOrder": 7,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "invert": {
+          "type": "boolean",
+          "title": "actInvertTitle",
+          "description": "actInvertDescription",
+          "default": false,
+          "_format": "checkbox",
+          "propertyOrder": 8,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "recalibrateAfter": {
+          "type": "number",
+          "title": "actRecalibrateTitle",
+          "description": "actRecalibrateDescription",
+          "minimum": 100,
+          "maximum": 5000,
+          "default": 500,
+          "propertyOrder": 9,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "posMin": {
+          "type": "number",
+          "title": "actPosMinTitle",
+          "description": "actPosMinDescription",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0,
+          "propertyOrder": 20,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "posMax": {
+          "type": "number",
+          "title": "actPosMaxTitle",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 100,
+          "propertyOrder": 21,
+          "options": {
+            "grid_columns": 6
+          }
+        }
+      },
+      "required": [
+        "type",
+        "open",
+        "close",
+        "travelTime"
+      ]
+    },
+    "analogActuator": {
+      "type": "object",
+      "title": "actAnalogTitle",
+      "description": "actAnalogDescription",
+      "_format": "grid",
+      "options": {
+        "disable_collapse": true,
+        "disable_edit_json": true
+      },
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "analog"
+          ],
+          "default": "analog",
+          "options": {
+            "hidden": true
+          }
+        },
+        "out": {
+          "type": "string",
+          "pattern": "^$|^[^/+#]+/[^/+#]+$",
+          "minLength": 0,
+          "_format": "wb-autocomplete",
+          "options": {
+            "patternmessage": "errMqttTopic",
+            "inputAttributes": {
+              "placeholder": "phMqttTopic"
+            },
+            "wb": {
+              "data": "devices"
+            },
+            "grid_columns": 12
+          },
+          "title": "actOutTitle",
+          "description": "actOutDescription",
+          "propertyOrder": 1
+        },
+        "outUnits": {
+          "type": "string",
+          "title": "actOutUnitsTitle",
+          "enum": [
+            "mv",
+            "percent"
+          ],
+          "default": "mv",
+          "propertyOrder": 2,
+          "options": {
+            "grid_columns": 4,
+            "enum_titles": [
+              "actUnitsMv",
+              "actUnitsPercent"
+            ]
+          }
+        },
+        "vMin": {
+          "type": "number",
+          "title": "actVMinTitle",
+          "description": "actVMinDescription",
+          "default": 0,
+          "propertyOrder": 3,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "vMax": {
+          "type": "number",
+          "title": "actVMaxTitle",
+          "default": 10000,
+          "propertyOrder": 4,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "invert": {
+          "type": "boolean",
+          "title": "actInvertTitle",
+          "default": false,
+          "_format": "checkbox",
+          "propertyOrder": 5,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "feedback": {
+          "type": "string",
+          "pattern": "^$|^[^/+#]+/[^/+#]+$",
+          "minLength": 0,
+          "_format": "wb-autocomplete",
+          "options": {
+            "patternmessage": "errMqttTopic",
+            "inputAttributes": {
+              "placeholder": "phMqttTopic"
+            },
+            "wb": {
+              "data": "devices"
+            },
+            "grid_columns": 6
+          },
+          "title": "actFeedbackTitle",
+          "description": "actFeedbackDescription",
+          "propertyOrder": 6
+        },
+        "rateLimit": {
+          "type": "number",
+          "title": "actRateLimitTitle",
+          "description": "actRateLimitDescription",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0,
+          "propertyOrder": 7,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "posMin": {
+          "type": "number",
+          "title": "actPosMinTitle",
+          "description": "actPosMinDescription",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0,
+          "propertyOrder": 20,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "posMax": {
+          "type": "number",
+          "title": "actPosMaxTitle",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 100,
+          "propertyOrder": 21,
+          "options": {
+            "grid_columns": 6
+          }
+        }
+      },
+      "required": [
+        "type",
+        "out"
+      ]
+    },
+    "group": {
+      "type": "object",
+      "title": "groupTitle",
+      "headerTemplate": "{{ self.title }}",
+      "_format": "grid",
+      "options": {
+        "disable_edit_json": true
+      },
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "grpIdTitle",
+          "description": "grpIdDescription",
+          "pattern": "^[0-9a-zA-Z_]+$",
+          "minLength": 1,
+          "maxLength": 40,
+          "default": "mix_floor",
+          "propertyOrder": 1,
+          "options": {
+            "grid_columns": 6,
+            "patternmessage": "errId"
+          }
+        },
+        "title": {
+          "type": "string",
+          "title": "grpTitleTitle",
+          "minLength": 1,
+          "maxLength": 60,
+          "default": "Смесительный узел",
+          "propertyOrder": 2,
+          "options": {
+            "grid_columns": 6
+          }
+        },
+        "defaultEnabled": {
+          "type": "boolean",
+          "title": "grpEnabledTitle",
+          "default": true,
+          "_format": "checkbox",
+          "propertyOrder": 3,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "defaultMode": {
+          "type": "integer",
+          "title": "grpModeTitle",
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "default": 1,
+          "propertyOrder": 4,
+          "options": {
+            "grid_columns": 4,
+            "enum_titles": [
+              "modeManual",
+              "modeFixed",
+              "modeCurve"
+            ]
+          }
+        },
+        "defaultSetpoint": {
+          "type": "number",
+          "title": "grpSetpointTitle",
+          "description": "grpSetpointDescription",
+          "minimum": 5,
+          "maximum": 90,
+          "default": 35,
+          "propertyOrder": 5,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "debug": {
+          "type": "boolean",
+          "title": "grpDebugTitle",
+          "default": false,
+          "_format": "checkbox",
+          "propertyOrder": 6,
+          "options": {
+            "grid_columns": 4
+          }
+        },
+        "sensors": {
+          "type": "object",
+          "title": "senTitle",
+          "description": "senDescription",
+          "propertyOrder": 10,
+          "_format": "grid",
+          "options": {
+            "disable_edit_json": true,
+            "disable_properties": true
+          },
+          "properties": {
+            "supplyIn": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 3,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 6
+              },
+              "title": "senSupplyInTitle",
+              "description": "senSupplyInDescription",
+              "propertyOrder": 1
+            },
+            "supplyOut": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 3,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 6
+              },
+              "title": "senSupplyOutTitle",
+              "description": "senSupplyOutDescription",
+              "propertyOrder": 2
+            },
+            "returnLine": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 0,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 6
+              },
+              "title": "senReturnTitle",
+              "description": "senReturnDescription",
+              "propertyOrder": 3
+            },
+            "outdoor": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 0,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 6
+              },
+              "title": "senOutdoorTitle",
+              "description": "senOutdoorDescription",
+              "propertyOrder": 4
+            },
+            "room": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 0,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 6
+              },
+              "title": "senRoomTitle",
+              "description": "senRoomDescription",
+              "propertyOrder": 5
+            },
+            "tau": {
+              "type": "number",
+              "title": "senTauTitle",
+              "description": "senTauDescription",
+              "minimum": 0,
+              "maximum": 120,
+              "default": 5,
+              "propertyOrder": 6,
+              "options": {
+                "grid_columns": 6
+              }
+            }
+          },
+          "required": [
+            "supplyIn",
+            "supplyOut"
+          ]
+        },
+        "actuator": {
+          "title": "actTitle",
+          "description": "actDescription",
+          "propertyOrder": 20,
+          "oneOf": [
+            {
+              "$ref": "#/definitions/tristateActuator"
+            },
+            {
+              "$ref": "#/definitions/analogActuator"
+            }
+          ],
+          "options": {
+            "keep_oneof_values": false,
+            "disable_collapse": true,
+            "disable_edit_json": true
+          }
+        },
+        "pump": {
+          "type": "object",
+          "title": "pumpTitle",
+          "description": "pumpDescription",
+          "propertyOrder": 30,
+          "_format": "grid",
+          "options": {
+            "disable_edit_json": true,
+            "disable_properties": true
+          },
+          "properties": {
+            "topic": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 0,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 6
+              },
+              "title": "pumpTopicTitle",
+              "description": "pumpTopicDescription",
+              "propertyOrder": 1
+            },
+            "postRun": {
+              "type": "integer",
+              "title": "pumpPostRunTitle",
+              "description": "pumpPostRunDescription",
+              "minimum": 0,
+              "maximum": 3600,
+              "default": 300,
+              "propertyOrder": 2,
+              "options": {
+                "grid_columns": 3
+              }
+            },
+            "antiStickDays": {
+              "type": "integer",
+              "title": "pumpAntiStickTitle",
+              "description": "pumpAntiStickDescription",
+              "minimum": 0,
+              "maximum": 60,
+              "default": 7,
+              "propertyOrder": 3,
+              "options": {
+                "grid_columns": 3
+              }
+            }
+          }
+        },
+        "demand": {
+          "type": "object",
+          "title": "demandTitle",
+          "description": "demandDescription",
+          "propertyOrder": 35,
+          "_format": "grid",
+          "options": {
+            "disable_edit_json": true,
+            "disable_properties": true
+          },
+          "properties": {
+            "topic": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 0,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 8
+              },
+              "title": "demandTopicTitle",
+              "description": "demandTopicDescription",
+              "propertyOrder": 1
+            },
+            "band": {
+              "type": "number",
+              "title": "demandBandTitle",
+              "minimum": 0,
+              "maximum": 20,
+              "default": 1,
+              "propertyOrder": 2,
+              "options": {
+                "grid_columns": 4
+              }
+            }
+          }
+        },
+        "control": {
+          "type": "object",
+          "title": "ctrlTitle",
+          "description": "ctrlDescription",
+          "propertyOrder": 40,
+          "_format": "grid",
+          "options": {
+            "disable_edit_json": true,
+            "disable_properties": true
+          },
+          "properties": {
+            "period": {
+              "type": "number",
+              "title": "ctrlPeriodTitle",
+              "description": "ctrlPeriodDescription",
+              "minimum": 1,
+              "maximum": 300,
+              "default": 20,
+              "propertyOrder": 1,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "kp": {
+              "type": "number",
+              "title": "ctrlKpTitle",
+              "description": "ctrlKpDescription",
+              "minimum": 0,
+              "maximum": 50,
+              "default": 3,
+              "propertyOrder": 2,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "ki": {
+              "type": "number",
+              "title": "ctrlKiTitle",
+              "description": "ctrlKiDescription",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.012,
+              "propertyOrder": 3,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "kd": {
+              "type": "number",
+              "title": "ctrlKdTitle",
+              "description": "ctrlKdDescription",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 0,
+              "propertyOrder": 4,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "deadband": {
+              "type": "number",
+              "title": "ctrlDeadbandTitle",
+              "description": "ctrlDeadbandDescription",
+              "minimum": 0,
+              "maximum": 5,
+              "default": 0.3,
+              "propertyOrder": 5,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "feedForward": {
+              "type": "boolean",
+              "title": "ctrlFfTitle",
+              "description": "ctrlFfDescription",
+              "default": true,
+              "_format": "checkbox",
+              "propertyOrder": 6,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "setpointMin": {
+              "type": "number",
+              "title": "ctrlSpMinTitle",
+              "minimum": 5,
+              "maximum": 90,
+              "default": 20,
+              "propertyOrder": 7,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "setpointMax": {
+              "type": "number",
+              "title": "ctrlSpMaxTitle",
+              "minimum": 5,
+              "maximum": 95,
+              "default": 45,
+              "propertyOrder": 8,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "setpointRamp": {
+              "type": "number",
+              "title": "ctrlRampTitle",
+              "description": "ctrlRampDescription",
+              "minimum": 0,
+              "maximum": 60,
+              "default": 2,
+              "propertyOrder": 9,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "loopDeltaT": {
+              "type": "number",
+              "title": "ctrlLoopDtTitle",
+              "description": "ctrlLoopDtDescription",
+              "minimum": 1,
+              "maximum": 40,
+              "default": 7,
+              "propertyOrder": 10,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "minAuthority": {
+              "type": "number",
+              "title": "ctrlMinAuthTitle",
+              "description": "ctrlMinAuthDescription",
+              "minimum": 0.5,
+              "maximum": 20,
+              "default": 3,
+              "propertyOrder": 11,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "readyBand": {
+              "type": "number",
+              "title": "ctrlReadyBandTitle",
+              "minimum": 0.1,
+              "maximum": 10,
+              "default": 1,
+              "propertyOrder": 12,
+              "options": {
+                "grid_columns": 4
+              }
+            }
+          }
+        },
+        "safety": {
+          "type": "object",
+          "title": "safTitle",
+          "description": "safDescription",
+          "propertyOrder": 50,
+          "_format": "grid",
+          "options": {
+            "disable_edit_json": true,
+            "disable_properties": true
+          },
+          "properties": {
+            "maxSupply": {
+              "type": "number",
+              "title": "safMaxSupplyTitle",
+              "description": "safMaxSupplyDescription",
+              "minimum": 20,
+              "maximum": 95,
+              "default": 45,
+              "propertyOrder": 1,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "maxSupplyHyst": {
+              "type": "number",
+              "title": "safHystTitle",
+              "minimum": 0.5,
+              "maximum": 20,
+              "default": 4,
+              "propertyOrder": 2,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "softLimitBand": {
+              "type": "number",
+              "title": "safSoftTitle",
+              "description": "safSoftDescription",
+              "minimum": 0,
+              "maximum": 20,
+              "default": 3,
+              "propertyOrder": 3,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "failSafePosition": {
+              "type": "number",
+              "title": "safFailSafeTitle",
+              "description": "safFailSafeDescription",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 0,
+              "propertyOrder": 4,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "emergencyInput": {
+              "type": "string",
+              "pattern": "^$|^[^/+#]+/[^/+#]+$",
+              "minLength": 0,
+              "_format": "wb-autocomplete",
+              "options": {
+                "patternmessage": "errMqttTopic",
+                "inputAttributes": {
+                  "placeholder": "phMqttTopic"
+                },
+                "wb": {
+                  "data": "devices"
+                },
+                "grid_columns": 8
+              },
+              "title": "safEmergencyTitle",
+              "description": "safEmergencyDescription",
+              "propertyOrder": 5
+            },
+            "emergencyInputInvert": {
+              "type": "boolean",
+              "title": "safEmergencyInvertTitle",
+              "description": "safEmergencyInvertDescription",
+              "default": false,
+              "_format": "checkbox",
+              "propertyOrder": 6,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "frostProtect": {
+              "type": "boolean",
+              "title": "safFrostTitle",
+              "default": true,
+              "_format": "checkbox",
+              "propertyOrder": 7,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "frostTemp": {
+              "type": "number",
+              "title": "safFrostTempTitle",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 6,
+              "propertyOrder": 8,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "frostPosition": {
+              "type": "number",
+              "title": "safFrostPosTitle",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 40,
+              "propertyOrder": 9,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "deviationAlarm": {
+              "type": "number",
+              "title": "safDevTitle",
+              "description": "safDevDescription",
+              "minimum": 1,
+              "maximum": 40,
+              "default": 8,
+              "propertyOrder": 10,
+              "options": {
+                "grid_columns": 6
+              }
+            },
+            "deviationAlarmDelay": {
+              "type": "integer",
+              "title": "safDevDelayTitle",
+              "minimum": 60,
+              "maximum": 7200,
+              "default": 900,
+              "propertyOrder": 11,
+              "options": {
+                "grid_columns": 6
+              }
+            }
+          }
+        },
+        "curve": {
+          "type": "object",
+          "title": "curveTitle",
+          "description": "curveDescription",
+          "propertyOrder": 60,
+          "_format": "grid",
+          "options": {
+            "disable_edit_json": true,
+            "disable_properties": true
+          },
+          "properties": {
+            "roomTemp": {
+              "type": "number",
+              "title": "curveRoomTitle",
+              "description": "curveRoomDescription",
+              "minimum": 10,
+              "maximum": 30,
+              "default": 20,
+              "propertyOrder": 1,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "outdoorDesign": {
+              "type": "number",
+              "title": "curveOutDesignTitle",
+              "description": "curveOutDesignDescription",
+              "minimum": -60,
+              "maximum": 5,
+              "default": -28,
+              "propertyOrder": 2,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "supplyDesign": {
+              "type": "number",
+              "title": "curveSupDesignTitle",
+              "description": "curveSupDesignDescription",
+              "minimum": 20,
+              "maximum": 90,
+              "default": 35,
+              "propertyOrder": 3,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "returnDesign": {
+              "type": "number",
+              "title": "curveRetDesignTitle",
+              "minimum": 15,
+              "maximum": 85,
+              "default": 28,
+              "propertyOrder": 4,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "exponent": {
+              "type": "number",
+              "title": "curveExpTitle",
+              "description": "curveExpDescription",
+              "minimum": 1,
+              "maximum": 1.6,
+              "default": 1.1,
+              "propertyOrder": 5,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "roomGain": {
+              "type": "number",
+              "title": "curveRoomGainTitle",
+              "description": "curveRoomGainDescription",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 2,
+              "propertyOrder": 6,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "summerCutoff": {
+              "type": "number",
+              "title": "curveSummerTitle",
+              "description": "curveSummerDescription",
+              "minimum": 5,
+              "maximum": 30,
+              "default": 16,
+              "propertyOrder": 7,
+              "options": {
+                "grid_columns": 4
+              }
+            },
+            "summerHyst": {
+              "type": "number",
+              "title": "curveSummerHystTitle",
+              "minimum": 0.5,
+              "maximum": 10,
+              "default": 2,
+              "propertyOrder": 8,
+              "options": {
+                "grid_columns": 4
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "sensors",
+        "actuator"
+      ]
+    }
+  },
+  "properties": {
+    "groups": {
+      "type": "array",
+      "title": "groupsArrTitle",
+      "description": "groupsArrDescription",
+      "propertyOrder": 1,
+      "items": {
+        "$ref": "#/definitions/group"
+      },
+      "options": {
+        "disable_array_reorder": true,
+        "array_controls_top": true,
+        "wb": {
+          "disable_panel": false
+        }
+      }
+    }
+  },
+  "required": [
+    "groups"
+  ],
+  "translations": {
+    "en": {
+      "mixingGroupsTitle": "Mixing groups (heating)",
+      "mixingGroupsDescription": "Supply temperature control after a mixing unit with a three-way valve",
+      "groupsArrTitle": "Mixing groups",
+      "groupsArrDescription": "One entry per mixing unit. Each creates its own virtual device.",
+      "groupTitle": "Mixing group",
+      "errMqttTopic": "Must match the format <device>/<control>",
+      "errId": "Latin letters, digits and underscore only",
+      "phMqttTopic": "Device/Control",
+      "grpIdTitle": "MQTT id",
+      "grpIdDescription": "Virtual device id, e.g. mix_floor. Latin letters, digits, underscore.",
+      "grpTitleTitle": "Name",
+      "grpEnabledTitle": "Enabled by default",
+      "grpModeTitle": "Default mode",
+      "modeManual": "Manual position",
+      "modeFixed": "Fixed setpoint",
+      "modeCurve": "Weather curve",
+      "grpSetpointTitle": "Default setpoint, °C",
+      "grpSetpointDescription": "Underfloor heating 35, radiators 50",
+      "grpDebugTitle": "Debug logging",
+      "senTitle": "Sensors",
+      "senDescription": "Pick controls from the list of available MQTT topics",
+      "senSupplyInTitle": "Inlet (from boiler) *",
+      "senSupplyInDescription": "Required. Used for the mixing feed-forward model.",
+      "senSupplyOutTitle": "Outlet (after mixing unit) *",
+      "senSupplyOutDescription": "Required. This is what is being controlled.",
+      "senReturnTitle": "Loop return",
+      "senReturnDescription": "Optional but strongly recommended: greatly improves model accuracy",
+      "senOutdoorTitle": "Outdoor",
+      "senOutdoorDescription": "Required for the weather curve mode",
+      "senRoomTitle": "Room",
+      "senRoomDescription": "Optional, corrects the weather curve",
+      "senTauTitle": "Filter time constant, s",
+      "senTauDescription": "Smoothing of readings. 5 s is fine in most cases.",
+      "actTitle": "Valve actuator",
+      "actDescription": "Pick the actuator type",
+      "actTristateTitle": "Three-point (floating), two relays",
+      "actTristateDescription": "Open/close contacts, no position feedback",
+      "actAnalogTitle": "Analog 0-10 V",
+      "actAnalogDescription": "WB-MAO4 or similar",
+      "actOpenTitle": "Relay: open *",
+      "actOpenDescription": "Output driving the valve towards the boiler",
+      "actCloseTitle": "Relay: close *",
+      "actCloseDescription": "Output driving the valve towards the return",
+      "actTravelTimeTitle": "Full travel time, s *",
+      "actTravelTimeDescription": "From the datasheet, verify with a stopwatch on site",
+      "actTravelTimeCloseTitle": "Closing travel time, s",
+      "actTravelTimeCloseDescription": "Set separately if it differs by more than 10 %",
+      "actMinPulseTitle": "Min pulse, ms",
+      "actMinPulseDescription": "Shorter pulses do not move the actuator",
+      "actDeadbandTitle": "Position deadband, %",
+      "actDeadbandDescription": "Increase to reduce relay wear",
+      "actInterlockTitle": "Reversal delay, ms",
+      "actInterlockDescription": "Pause before switching direction",
+      "actInvertTitle": "Invert direction",
+      "actInvertDescription": "Swap open and close",
+      "actRecalibrateTitle": "Recalibrate after, % of travel",
+      "actRecalibrateDescription": "Accumulated travel before an endstop run",
+      "actOutTitle": "Analog output *",
+      "actOutDescription": "WB-MAO4 channel in 0-10 V mode",
+      "actOutUnitsTitle": "Output units",
+      "actUnitsMv": "millivolts (0..10000)",
+      "actUnitsPercent": "percent (0..100)",
+      "actVMinTitle": "Value at 0 %",
+      "actVMinDescription": "For a 2-10 V actuator set 2000",
+      "actVMaxTitle": "Value at 100 %",
+      "actFeedbackTitle": "Position feedback",
+      "actFeedbackDescription": "Optional analog input with actual position",
+      "actRateLimitTitle": "Rate limit, %/s",
+      "actRateLimitDescription": "0 = no limit",
+      "pumpTitle": "Circuit pump",
+      "pumpDescription": "Leave empty if the pump is controlled elsewhere",
+      "pumpTopicTitle": "Pump relay",
+      "pumpTopicDescription": "Turned on with the circuit, with post-run",
+      "pumpPostRunTitle": "Post-run, s",
+      "pumpPostRunDescription": "Removes residual heat after stopping",
+      "pumpAntiStickTitle": "Anti-stick, days",
+      "pumpAntiStickDescription": "Exercise pump and valve after idle time. 0 = off.",
+      "demandTitle": "Heat demand to the source",
+      "demandDescription": "Optional output requesting heat from the boiler",
+      "demandTopicTitle": "Demand relay",
+      "demandTopicDescription": "Boiler dry contact / OpenTherm module input",
+      "demandBandTitle": "Demand band, K",
+      "ctrlTitle": "Control",
+      "ctrlDescription": "Defaults are fine for most units. Kp and Ki can also be tuned live from the device page.",
+      "ctrlPeriodTitle": "Cycle, s",
+      "ctrlPeriodDescription": "15…30 for three-point, 3…10 for 0-10 V",
+      "ctrlKpTitle": "Kp, %/K",
+      "ctrlKpDescription": "Valve opening per 1 K of error",
+      "ctrlKiTitle": "Ki, %/(K·s)",
+      "ctrlKiDescription": "Removes steady-state error. Raise carefully.",
+      "ctrlKdTitle": "Kd",
+      "ctrlKdDescription": "Keep 0 for mixing units",
+      "ctrlDeadbandTitle": "Deadband, K",
+      "ctrlDeadbandDescription": "Reduced gain near the setpoint",
+      "ctrlFfTitle": "Feed-forward model",
+      "ctrlFfDescription": "Compensates inlet temperature changes. Keep enabled.",
+      "ctrlSpMinTitle": "Min setpoint, °C",
+      "ctrlSpMaxTitle": "Max setpoint, °C",
+      "ctrlRampTitle": "Setpoint ramp, K/min",
+      "ctrlRampDescription": "Smooth start-up. 0 = no limit.",
+      "ctrlLoopDtTitle": "Design loop ΔT, K",
+      "ctrlLoopDtDescription": "Used to estimate the return when there is no return sensor",
+      "ctrlMinAuthTitle": "Min authority, K",
+      "ctrlMinAuthDescription": "Minimum (inlet − return) for the model to work",
+      "ctrlReadyBandTitle": "Ready band, K",
+      "safTitle": "Protections",
+      "safDescription": "Software protection is the second line. Keep the hardware safety thermostat.",
+      "safMaxSupplyTitle": "Max supply, °C",
+      "safMaxSupplyDescription": "Hard limit. 45 for underfloor heating.",
+      "safHystTitle": "Hysteresis, K",
+      "safSoftTitle": "Soft limit band, K",
+      "safSoftDescription": "Setpoint is capped at max supply minus this value",
+      "safFailSafeTitle": "Position on sensor failure, %",
+      "safFailSafeDescription": "0 = close. Recommended for underfloor heating.",
+      "safEmergencyTitle": "Safety thermostat input",
+      "safEmergencyDescription": "Dry contact of the overheat thermostat",
+      "safEmergencyInvertTitle": "Normally closed contact",
+      "safEmergencyInvertDescription": "Alarm when the contact opens",
+      "safFrostTitle": "Frost protection",
+      "safFrostTempTitle": "Frost threshold, °C",
+      "safFrostPosTitle": "Frost valve position, %",
+      "safDevTitle": "Deviation alarm, K",
+      "safDevDescription": "Detects clogged filter, seized valve, air, failed pump",
+      "safDevDelayTitle": "Deviation alarm delay, s",
+      "curveTitle": "Weather curve",
+      "curveDescription": "Used in the weather curve mode. Slope and shift can be trimmed live from the device page.",
+      "curveRoomTitle": "Design room temp, °C",
+      "curveRoomDescription": "Comfort temperature",
+      "curveOutDesignTitle": "Design outdoor temp, °C",
+      "curveOutDesignDescription": "Coldest five-day average for the region",
+      "curveSupDesignTitle": "Design supply, °C",
+      "curveSupDesignDescription": "Project supply temperature at design outdoor temperature",
+      "curveRetDesignTitle": "Design return, °C",
+      "curveExpTitle": "Emitter exponent",
+      "curveExpDescription": "1.1 underfloor, 1.3 steel/aluminium radiators, 1.4 convectors",
+      "curveRoomGainTitle": "Room correction, K/K",
+      "curveRoomGainDescription": "Only used when a room sensor is set",
+      "curveSummerTitle": "Summer cutoff, °C",
+      "curveSummerDescription": "Circuit is disabled above this outdoor temperature",
+      "curveSummerHystTitle": "Summer hysteresis, K",
+      "actPosMinTitle": "Min position, %",
+      "actPosMinDescription": "Mechanical travel limits, leave 0 and 100 unless the valve must not fully close",
+      "actPosMaxTitle": "Max position, %"
+    },
+    "ru": {
+      "mixingGroupsTitle": "Смесительные узлы (отопление)",
+      "mixingGroupsDescription": "Поддержание температуры подачи после смесительного узла с трёхходовым краном",
+      "groupsArrTitle": "Смесительные узлы",
+      "groupsArrDescription": "По одной записи на каждый узел. Для каждого создаётся своё виртуальное устройство.",
+      "groupTitle": "Смесительный узел",
+      "errMqttTopic": "Формат: <устройство>/<контрол>",
+      "errId": "Только латиница, цифры и подчёркивание",
+      "phMqttTopic": "Устройство/Контрол",
+      "grpIdTitle": "MQTT-идентификатор",
+      "grpIdDescription": "Идентификатор виртуального устройства, например mix_floor. Латиница, цифры, подчёркивание.",
+      "grpTitleTitle": "Название",
+      "grpEnabledTitle": "Включён по умолчанию",
+      "grpModeTitle": "Режим по умолчанию",
+      "modeManual": "Ручное положение",
+      "modeFixed": "Фиксированная уставка",
+      "modeCurve": "Погодозависимая кривая",
+      "grpSetpointTitle": "Уставка по умолчанию, °C",
+      "grpSetpointDescription": "Тёплый пол 35, радиаторы 50",
+      "grpDebugTitle": "Отладочный лог",
+      "senTitle": "Датчики",
+      "senDescription": "Выбирайте контролы из списка доступных MQTT-топиков",
+      "senSupplyInTitle": "Вход узла (от котла) *",
+      "senSupplyInDescription": "Обязательный. Нужен для работы модели упреждения.",
+      "senSupplyOutTitle": "Выход узла (после смешения) *",
+      "senSupplyOutDescription": "Обязательный. Именно эту температуру держим.",
+      "senReturnTitle": "Обратка контура",
+      "senReturnDescription": "Необязательный, но очень желательный: сильно повышает точность модели",
+      "senOutdoorTitle": "Улица",
+      "senOutdoorDescription": "Нужен для режима погодозависимой кривой",
+      "senRoomTitle": "Помещение",
+      "senRoomDescription": "Необязательный, корректирует кривую",
+      "senTauTitle": "Постоянная фильтра, с",
+      "senTauDescription": "Сглаживание показаний. В большинстве случаев подходит 5 с.",
+      "actTitle": "Электропривод крана",
+      "actDescription": "Выберите тип привода",
+      "actTristateTitle": "Фазный (3-точечный), два реле",
+      "actTristateDescription": "Контакты «открыть» и «закрыть», обратной связи по положению нет",
+      "actAnalogTitle": "Аналоговый 0-10 В",
+      "actAnalogDescription": "WB-MAO4 или аналогичный модуль",
+      "actOpenTitle": "Реле «открыть» *",
+      "actOpenDescription": "Выход, открывающий кран в сторону котла",
+      "actCloseTitle": "Реле «закрыть» *",
+      "actCloseDescription": "Выход, закрывающий кран в сторону обратки",
+      "actTravelTimeTitle": "Время полного хода, с *",
+      "actTravelTimeDescription": "Из паспорта привода, обязательно проверьте секундомером на объекте",
+      "actTravelTimeCloseTitle": "Время хода на закрытие, с",
+      "actTravelTimeCloseDescription": "Задайте отдельно, если отличается больше чем на 10 %",
+      "actMinPulseTitle": "Минимальный импульс, мс",
+      "actMinPulseDescription": "Более короткие импульсы привод не отрабатывает",
+      "actDeadbandTitle": "Зона нечувствительности, %",
+      "actDeadbandDescription": "Увеличьте, если реле щёлкает слишком часто",
+      "actInterlockTitle": "Пауза на реверс, мс",
+      "actInterlockDescription": "Задержка перед сменой направления",
+      "actInvertTitle": "Инвертировать направление",
+      "actInvertDescription": "Поменять местами «открыть» и «закрыть»",
+      "actRecalibrateTitle": "Рекалибровка после, % хода",
+      "actRecalibrateDescription": "Накопленный ход до прогона на упор",
+      "actOutTitle": "Аналоговый выход *",
+      "actOutDescription": "Канал WB-MAO4 в режиме 0-10 В",
+      "actOutUnitsTitle": "Единицы выхода",
+      "actUnitsMv": "милливольты (0..10000)",
+      "actUnitsPercent": "проценты (0..100)",
+      "actVMinTitle": "Значение при 0 %",
+      "actVMinDescription": "Для привода 2-10 В поставьте 2000",
+      "actVMaxTitle": "Значение при 100 %",
+      "actFeedbackTitle": "Обратная связь по положению",
+      "actFeedbackDescription": "Необязательный аналоговый вход с фактическим положением",
+      "actRateLimitTitle": "Ограничение скорости, %/с",
+      "actRateLimitDescription": "0 = без ограничения",
+      "pumpTitle": "Насос контура",
+      "pumpDescription": "Оставьте пустым, если насосом управляет котёл или сам узел",
+      "pumpTopicTitle": "Реле насоса",
+      "pumpTopicDescription": "Включается вместе с контуром, с выбегом",
+      "pumpPostRunTitle": "Выбег, с",
+      "pumpPostRunDescription": "Снимает остаточное тепло после остановки",
+      "pumpAntiStickTitle": "Антизалипание, дней",
+      "pumpAntiStickDescription": "Прогон насоса и клапана после простоя. 0 = выключено.",
+      "demandTitle": "Запрос тепла источнику",
+      "demandDescription": "Необязательный выход запроса тепла на котёл",
+      "demandTopicTitle": "Реле запроса тепла",
+      "demandTopicDescription": "Сухой контакт котла или вход модуля OpenTherm",
+      "demandBandTitle": "Зона запроса, К",
+      "ctrlTitle": "Регулирование",
+      "ctrlDescription": "Значения по умолчанию подходят большинству узлов. Kp и Ki потом можно крутить на лету на странице устройства.",
+      "ctrlPeriodTitle": "Такт, с",
+      "ctrlPeriodDescription": "15…30 для фазного привода, 3…10 для 0-10 В",
+      "ctrlKpTitle": "Kp, %/К",
+      "ctrlKpDescription": "На сколько процентов открыть кран на 1 К рассогласования",
+      "ctrlKiTitle": "Ki, %/(К·с)",
+      "ctrlKiDescription": "Убирает статическую ошибку. Поднимать осторожно.",
+      "ctrlKdTitle": "Kd",
+      "ctrlKdDescription": "Для смесительных узлов оставляйте 0",
+      "ctrlDeadbandTitle": "Зона нечувствительности, К",
+      "ctrlDeadbandDescription": "Около уставки усиление снижается",
+      "ctrlFfTitle": "Упреждение по модели",
+      "ctrlFfDescription": "Компенсирует изменения температуры на входе. Оставьте включённым.",
+      "ctrlSpMinTitle": "Мин. уставка, °C",
+      "ctrlSpMaxTitle": "Макс. уставка, °C",
+      "ctrlRampTitle": "Рампа уставки, К/мин",
+      "ctrlRampDescription": "Плавный вывод на уставку при пуске. 0 = без ограничения.",
+      "ctrlLoopDtTitle": "Расчётный перепад контура, К",
+      "ctrlLoopDtDescription": "Используется для оценки обратки, если нет её датчика",
+      "ctrlMinAuthTitle": "Мин. располагаемый перепад, К",
+      "ctrlMinAuthDescription": "Минимальная разница (вход − обратка) для работы модели",
+      "ctrlReadyBandTitle": "Зона «уставка держится», К",
+      "safTitle": "Защиты",
+      "safDescription": "Программная защита — второй рубеж. Аппаратный аварийный термостат обязателен.",
+      "safMaxSupplyTitle": "Предел подачи, °C",
+      "safMaxSupplyDescription": "Жёсткий предел. Для тёплого пола 45.",
+      "safHystTitle": "Гистерезис, К",
+      "safSoftTitle": "Мягкое ограничение, К",
+      "safSoftDescription": "Уставка не поднимается выше предела подачи минус это значение",
+      "safFailSafeTitle": "Положение при отказе датчика, %",
+      "safFailSafeDescription": "0 = закрыть. Рекомендуется для тёплого пола.",
+      "safEmergencyTitle": "Вход аварийного термостата",
+      "safEmergencyDescription": "Сухой контакт термостата защиты от перегрева",
+      "safEmergencyInvertTitle": "Нормально замкнутый контакт",
+      "safEmergencyInvertDescription": "Авария при размыкании контакта",
+      "safFrostTitle": "Защита от замерзания",
+      "safFrostTempTitle": "Порог замерзания, °C",
+      "safFrostPosTitle": "Положение крана при защите, %",
+      "safDevTitle": "Авария по рассогласованию, К",
+      "safDevDescription": "Ловит засор фильтра, закисший кран, воздух в контуре, отказ насоса",
+      "safDevDelayTitle": "Задержка аварии, с",
+      "curveTitle": "Погодозависимая кривая",
+      "curveDescription": "Работает в режиме кривой. Наклон и сдвиг подстраиваются на лету на странице устройства.",
+      "curveRoomTitle": "Расчётная температура помещения, °C",
+      "curveRoomDescription": "Комфортная температура",
+      "curveOutDesignTitle": "Расчётная температура улицы, °C",
+      "curveOutDesignDescription": "Температура наиболее холодной пятидневки для региона",
+      "curveSupDesignTitle": "Проектная подача, °C",
+      "curveSupDesignDescription": "Температура подачи при расчётной температуре улицы",
+      "curveRetDesignTitle": "Проектная обратка, °C",
+      "curveExpTitle": "Показатель теплоотдачи",
+      "curveExpDescription": "1.1 тёплый пол, 1.3 стальные и алюминиевые радиаторы, 1.4 конвекторы",
+      "curveRoomGainTitle": "Коррекция по помещению, К/К",
+      "curveRoomGainDescription": "Работает только если задан датчик помещения",
+      "curveSummerTitle": "Летнее отключение, °C",
+      "curveSummerDescription": "Выше этой температуры на улице контур отключается",
+      "curveSummerHystTitle": "Гистерезис лета, К",
+      "actPosMinTitle": "Мин. положение, %",
+      "actPosMinDescription": "Механическое ограничение хода. Оставьте 0 и 100, если кран не должен оставаться приоткрытым.",
+      "actPosMaxTitle": "Макс. положение, %"
+    }
+  }
+}

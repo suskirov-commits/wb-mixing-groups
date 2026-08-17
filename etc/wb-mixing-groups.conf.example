@@ -1,0 +1,183 @@
+// ---------------------------------------------------------------------------
+//  /etc/wb-mixing-groups.conf
+//  Конфигурация смесительных узлов. Формат — JSON с комментариями
+//  (читается функцией readConfig() движка wb-rules).
+//
+//  ВСЕ ТОПИКИ ЗАМЕНИТЬ НА СВОИ! Посмотреть реальные имена:
+//      mosquitto_sub -t '/devices/+/controls/+' -v
+//  или в веб-интерфейсе: Настройки -> MQTT-каналы.
+// ---------------------------------------------------------------------------
+{
+  "groups": [
+
+    // =====================================================================
+    //  КОНТУР 1. Тёплый пол. Привод фазный (3-точечный), 2 реле.
+    // =====================================================================
+    {
+      "id": "mix_floor",
+      "title": "Смесительный узел: тёплый пол",
+      "debug": false,
+
+      "defaultEnabled": true,
+      "defaultMode": 1,          // 0 ручной, 1 фикс. уставка, 2 кривая
+      "defaultSetpoint": 35,
+
+      "sensors": {
+        // Обязательные
+        "supplyIn":   "wb-w1/28-00000a1b2c3d",   // вход узла, от котла
+        "supplyOut":  "wb-w1/28-00000a1b2c4e",   // выход узла, в контур
+        // Необязательные, но очень желательные
+        "returnLine": "wb-w1/28-00000a1b2c5f",   // обратка контура в узел
+        "outdoor":    "wb-w1/28-00000a1b2c60",   // улица (нужен для кривой)
+        "room":       null,                       // датчик в помещении
+        "tau": 5                                  // постоянная фильтра, с
+      },
+
+      "actuator": {
+        "type": "tristate",                       // фазный 3-точечный привод
+        "open":  "wb-mr6c_45/K1",                 // реле «открыть»
+        "close": "wb-mr6c_45/K2",                 // реле «закрыть»
+        "travelTime": 120,                        // ПАСПОРТНОЕ время хода, с
+        "travelTimeClose": 120,
+        "minPulse": 500,                          // мин. импульс, мс
+        "deadband": 1.5,                          // зона нечувств., %
+        "interlock": 300,                         // пауза на реверс, мс
+        "invert": false,
+        "recalibrateAfter": 500,                  // % накопл. хода до прогона
+        "posMin": 0,
+        "posMax": 100
+      },
+
+      "pump": {
+        "topic": "wb-mr6c_45/K3",
+        "postRun": 300,                           // выбег насоса, с
+        "antiStickDays": 7
+      },
+
+      "demand": {
+        // Запрос тепла источнику (реле на клеммы котла / вход OpenTherm-модуля)
+        "topic": null,
+        "band": 1
+      },
+
+      "control": {
+        "period": 20,          // такт регулирования, с (для 3-точечного 15..30)
+        "kp": 3.0,             // %/К
+        "ki": 0.012,           // %/(К·с)
+        "kd": 0,
+        "deadband": 0.3,       // К
+        "setpointMin": 20,
+        "setpointMax": 45,
+        "setpointRamp": 2,     // К/мин — плавный вывод на уставку
+        "loopDeltaT": 7,       // расчётный перепад контура, К (если нет датчика обратки)
+        "minAuthority": 3,     // мин. (Tвх − Tобр) для работы модели, К
+        "feedForward": true,
+        "readyBand": 1.0
+      },
+
+      "safety": {
+        "maxSupply": 45,             // ЖЁСТКИЙ предел подачи в пол, °C
+        "maxSupplyHyst": 4,
+        "softLimitBand": 3,          // уставку не пускаем выше maxSupply−3
+        "failSafePosition": 0,       // при отказе датчика — закрыть
+        "frostProtect": true,
+        "frostTemp": 6,
+        "frostPosition": 40,
+        "deviationAlarm": 8,         // К
+        "deviationAlarmDelay": 900,  // с
+        "emergencyInput": null,      // топик аварийного термостата (сухой контакт)
+        "emergencyInputInvert": false
+      },
+
+      "curve": {
+        "roomTemp": 20,
+        "outdoorDesign": -28,        // расчётная температура вашего региона
+        "supplyDesign": 35,          // проектная подача при outdoorDesign
+        "returnDesign": 28,          // проектная обратка
+        "exponent": 1.1,             // 1.1 — тёплый пол
+        "summerCutoff": 16,
+        "summerHyst": 2,
+        "roomGain": 2
+      }
+    },
+
+    // =====================================================================
+    //  КОНТУР 2. Радиаторы. Привод 0-10 В через WB-MAO4.
+    // =====================================================================
+    {
+      "id": "mix_rad",
+      "title": "Смесительный узел: радиаторы",
+
+      "defaultEnabled": true,
+      "defaultMode": 2,
+      "defaultSetpoint": 50,
+
+      "sensors": {
+        "supplyIn":   "wb-w1/28-00000a1b2c3d",   // тот же вход от котла
+        "supplyOut":  "wb-w1/28-00000a1b2c71",
+        "returnLine": "wb-w1/28-00000a1b2c82",
+        "outdoor":    "wb-w1/28-00000a1b2c60",
+        "room":       null,
+        "tau": 5
+      },
+
+      "actuator": {
+        "type": "analog",
+        "out": "wb-mao4_21/Channel 1",
+        "outUnits": "mv",          // WB-MAO4 в режиме 0-10 В: 0..10000 мВ
+        "vMin": 0,                 // для привода 2-10 В поставить 2000
+        "vMax": 10000,
+        "invert": false,
+        "feedback": null,          // топик обратной связи по положению, если есть
+        "rateLimit": 0,            // %/с, 0 = без ограничения
+        "posMin": 0,
+        "posMax": 100
+      },
+
+      "pump": {
+        "topic": "wb-mr6c_45/K4",
+        "postRun": 300,
+        "antiStickDays": 7
+      },
+
+      "control": {
+        "period": 5,
+        "kp": 2.5,
+        "ki": 0.02,
+        "kd": 0,
+        "deadband": 0.3,
+        "setpointMin": 25,
+        "setpointMax": 70,
+        "setpointRamp": 0,
+        "loopDeltaT": 10,
+        "minAuthority": 3,
+        "feedForward": true,
+        "readyBand": 1.0
+      },
+
+      "safety": {
+        "maxSupply": 70,
+        "maxSupplyHyst": 5,
+        "softLimitBand": 3,
+        "failSafePosition": 0,
+        "frostProtect": true,
+        "frostTemp": 6,
+        "frostPosition": 40,
+        "deviationAlarm": 10,
+        "deviationAlarmDelay": 1200
+      },
+
+      "curve": {
+        "roomTemp": 20,
+        "outdoorDesign": -28,
+        "supplyDesign": 50,
+        "returnDesign": 40,
+        "exponent": 1.3,           // 1.3 — стальные/алюминиевые радиаторы
+        "summerCutoff": 16,
+        "summerHyst": 2,
+        "roomGain": 2
+      }
+    }
+
+  ]
+}

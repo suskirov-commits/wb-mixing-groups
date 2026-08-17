@@ -1,0 +1,114 @@
+name: release
+
+# Тегируем версию — получаем готовый .deb в Releases:
+#
+#   git tag v1.0.0 && git push --tags
+#
+# После этого на контроллере:
+#
+#   wget https://github.com/<owner>/<repo>/releases/latest/download/wb-mixing-groups_all.deb
+#   dpkg -i wb-mixing-groups_all.deb
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, master]
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Установить зависимости для тестов
+        run: npm install
+
+      # Пакет не собирается, пока не прошли автотесты: регулятор, защиты,
+      # приводы, схема настроек, установщик. Битую версию физически
+      # невозможно выложить в релиз.
+      - name: Автотесты
+        run: |
+          node test/actuator.js
+          node test/faults.js
+          node test/bundle.js
+          node test/schema.js
+          bash test/install.sh
+
+      - name: Проверить, что однофайловая сборка соответствует исходникам
+        run: |
+          node build/make-bundle.js
+          git diff --exit-code dist/ || {
+            echo "::error::dist/wb-mixing-groups.js устарел — выполните 'make build' и закоммитьте"
+            exit 1
+          }
+
+      - name: Синтаксис ECMAScript 5 (движок wb-rules не понимает ES6)
+        run: |
+          npx --yes acorn --ecma5 --silent etc/wb-rules-modules/wbmix-util.js
+          npx --yes acorn --ecma5 --silent etc/wb-rules-modules/wbmix-pid.js
+          npx --yes acorn --ecma5 --silent etc/wb-rules-modules/wbmix-actuator.js
+          npx --yes acorn --ecma5 --silent etc/wb-rules-modules/wbmix-group.js
+          npx --yes acorn --ecma5 --silent etc/wb-rules/mixing-groups.js
+          npx --yes acorn --ecma5 --silent dist/wb-mixing-groups.js
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Пакет собирается тем же make deb, что и локально, — в релиз попадает
+      # ровно то, что можно воспроизвести у себя на машине
+      - name: Собрать .deb
+        run: |
+          make deb
+          # Architecture: all — внутри только JS и JSON, один пакет
+          # подходит и для WB6/7 (armhf), и для WB8 (arm64)
+          mv wb-mixing-groups_*_all.deb wb-mixing-groups_all.deb
+
+      - name: Проверить пакет
+        run: |
+          dpkg-deb -I wb-mixing-groups_all.deb
+          dpkg-deb -c wb-mixing-groups_all.deb
+          dpkg-deb -I wb-mixing-groups_all.deb conffiles | grep -q '/etc/wb-mixing-groups.conf'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: wb-mixing-groups_all.deb
+
+      - name: Опубликовать релиз
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: wb-mixing-groups_all.deb
+          generate_release_notes: true
+          body: |
+            ## Установка на контроллер
+
+            ```sh
+            wget https://github.com/${{ github.repository }}/releases/latest/download/wb-mixing-groups_all.deb
+            dpkg -i wb-mixing-groups_all.deb
+            rm wb-mixing-groups_all.deb
+            ```
+
+            Тот же пакет подходит для Wiren Board 6, 7 и 8 — внутри только
+            JavaScript и JSON, архитектура `all`.
+
+            Обновление выполняется той же командой. Конфигурация
+            `/etc/wb-mixing-groups.conf` объявлена в `conffiles`, поэтому
+            dpkg не затрёт настройки объекта.
+
+            После установки: веб-интерфейс → **Настройки** →
+            **«Смесительные узлы (отопление)»**.
