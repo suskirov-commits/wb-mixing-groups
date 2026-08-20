@@ -357,6 +357,14 @@ dpkg -i wb-mixing-groups_all.deb
     `make clean` сносит генератор вместе с выходом. Исходники сборки —
     в `tools/`, `build/` только для артефактов.
 
+12. **Сжатие .deb по умолчанию.** Сборочная машина (ubuntu-latest в CI)
+    имеет свежий `dpkg-deb`, который пакует в zstd. Контроллер Wiren Board —
+    это Debian с более старым `dpkg`, он zstd не разбирает:
+    `archive uses unknown compression for member 'control.tar.zst'`.
+    Пакет собирается, все проверки в CI проходят (там тот же новый dpkg),
+    а на контроллере он не ставится. Собирать с `-Zgzip` и проверять
+    состав архива через `ar t`, а не только `dpkg-deb -I`.
+
 ## 12. Текущее состояние
 
 ```

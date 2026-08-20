@@ -150,6 +150,13 @@ if command -v dpkg-deb >/dev/null 2>&1; then
       "$(dpkg-deb -c "$DEB" 2>/dev/null | grep -c 'wb-rules-modules/wbmix-group.js' >/dev/null && echo 1 || echo 0)"
     check "схема настроек попала в пакет" \
       "$(dpkg-deb -c "$DEB" 2>/dev/null | grep -c 'wb-mqtt-confed/schemas/' >/dev/null && echo 1 || echo 0)"
+    # Сжатие: контроллер Wiren Board — это Debian со старым dpkg, zstd он
+    # не разбирает. Сборочная машина с новым dpkg-deb выбирает zstd сама,
+    # и пакет молча получается неустанавливаемым.
+    check "control.tar сжат gzip (dpkg на контроллере не знает zstd)" \
+      "$(ar t "$DEB" 2>/dev/null | grep -qxF control.tar.gz && echo 1 || echo 0)"
+    check "data.tar сжат gzip" \
+      "$(ar t "$DEB" 2>/dev/null | grep -qxF data.tar.gz && echo 1 || echo 0)"
     dpkg-deb -I "$DEB" postinst > "$SANDBOX/postinst" 2>/dev/null
     sh -n "$SANDBOX/postinst"
     check "postinst синтаксически корректен" "$([ $? = 0 ] && echo 1 || echo 0)"

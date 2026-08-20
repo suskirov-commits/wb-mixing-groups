@@ -63,6 +63,13 @@ purge:
 # Ключевое — /etc/wb-mixing-groups.conf объявлен в conffiles. Это значит,
 # что dpkg при обновлении НЕ затрёт изменённый на объекте конфиг: если
 # файл менялся, он останется, а новый эталон ляжет рядом как .dpkg-dist.
+#
+# Сжатие принудительно gzip. Сборочная машина (ubuntu-latest в CI) имеет
+# свежий dpkg-deb, который по умолчанию пакует в zstd. Контроллер Wiren
+# Board — это Debian с более старым dpkg, он zstd не разбирает и падает:
+#   dpkg-deb: error: archive uses unknown compression for member
+#             'control.tar.zst', giving up
+# gzip понимают все версии dpkg, а экономия zstd на пакете в 44 КБ нулевая.
 
 deb: clean
 	@mkdir -p $(BUILD)/DEBIAN
@@ -98,7 +105,9 @@ deb: clean
 	@printf 'fi\nexit 0\n'                                  >> $(BUILD)/DEBIAN/postinst
 	@printf '#!/bin/sh\nset -e\nexit 0\n'                   >  $(BUILD)/DEBIAN/postrm
 	@chmod 0755 $(BUILD)/DEBIAN/postinst $(BUILD)/DEBIAN/postrm
-	@dpkg-deb --root-owner-group --build $(BUILD) $(DEB) >/dev/null
+	@dpkg-deb -Zgzip --root-owner-group --build $(BUILD) $(DEB) >/dev/null
+	@ar t $(DEB) | grep -qxF control.tar.gz || { echo 'ОШИБКА: control.tar не gzip, на контроллере не поставится'; exit 1; }
+	@ar t $(DEB) | grep -qxF data.tar.gz    || { echo 'ОШИБКА: data.tar не gzip, на контроллере не поставится'; exit 1; }
 	@echo "собран $(DEB)"
 	@dpkg-deb -I $(DEB) | sed -n '2,12p'
 
