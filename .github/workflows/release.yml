@@ -95,18 +95,19 @@ jobs:
           files: wb-mixing-groups_all.deb
           generate_release_notes: true
           body: |
-            ## Установка на контроллер
+            ## Установка этой версии на контроллер
 
             ```sh
-            wget https://github.com/${{ github.repository }}/releases/latest/download/wb-mixing-groups_all.deb
-            dpkg -i wb-mixing-groups_all.deb
-            rm wb-mixing-groups_all.deb
+            U=https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
+            wget -O /tmp/wbmix.deb $U/wb-mixing-groups_all.deb && dpkg -i /tmp/wbmix.deb
+            cat /usr/share/wbmix/VERSION
             ```
 
-            Тот же пакет подходит для Wiren Board 6, 7 и 8 — внутри только
-            JavaScript и JSON, архитектура `all`.
+            Команда ставит именно **${{ github.ref_name }}** — ею же можно откатиться
+            на эту версию. Последнюю версию ставит команда из README.
 
-            Обновление выполняется той же командой. Конфигурация
+            Тот же пакет подходит для Wiren Board 6, 7 и 8 — внутри только
+            JavaScript и JSON, архитектура `all`. Конфигурация
             `/etc/wb-mixing-groups.conf` объявлена в `conffiles`, поэтому
             dpkg не затрёт настройки объекта.
 

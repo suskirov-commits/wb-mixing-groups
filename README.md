@@ -8,14 +8,17 @@
 по входу, отказы датчиков и все защиты.
 
 > **Статус.** Алгоритм и защиты проверены на симуляционном стенде.
-> На реальном объекте пусконаладка ещё не проводилась.
+> Первая пусконаладка на реальном объекте — 27.09.2026: тёплый пол
+> и радиаторы, фазные приводы, без датчиков обратки. Тёплый пол вышел
+> на уставку и держит её, наладка продолжается.
 
 ## Быстрый старт
 
 ```sh
-# на контроллере
-wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
-dpkg -i wb-mixing-groups_all.deb
+# на контроллере; этими же строками — обновление
+U=https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download
+wget -O /tmp/wbmix.deb $U/wb-mixing-groups_all.deb && dpkg -i /tmp/wbmix.deb
+cat /usr/share/wbmix/VERSION
 ```
 
 Дальше: веб-интерфейс → **Настройки** → **«Смесительные узлы (отопление)»**.
@@ -88,14 +91,26 @@ T_смесь = k · T_вход + (1 − k) · T_обратка
 
 ### Способ 1 — .deb из релиза (рекомендуемый)
 
-На контроллере, две строки:
+На контроллере:
 
 ```sh
-wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
-dpkg -i wb-mixing-groups_all.deb
+U=https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download
+wget -O /tmp/wbmix.deb $U/wb-mixing-groups_all.deb && dpkg -i /tmp/wbmix.deb
+cat /usr/share/wbmix/VERSION
 ```
 
-Обновление — **та же команда**. Один пакет подходит для Wiren Board 6, 7 и 8:
+Последняя строка печатает установленную версию — сразу видно, что встало.
+
+Обновление — **те же строки**. Здесь важен ключ `-O`: он перезаписывает
+файл. Без него `wget` при повторном скачивании сохраняет новую версию
+как `wb-mixing-groups_all.deb.1`, а `dpkg -i wb-mixing-groups_all.deb`
+молча переустанавливает **старую**. Скачивание в `/tmp` заодно не оставляет
+пакетов в домашнем каталоге.
+
+Конкретную версию — например, чтобы откатиться — ставит команда со
+страницы нужного релиза: там ссылка ведёт на эту версию, а не на последнюю.
+
+Один пакет подходит для Wiren Board 6, 7 и 8:
 внутри только JavaScript и JSON, архитектура `all`, отдельные сборки под
 armhf и arm64 не нужны.
 
