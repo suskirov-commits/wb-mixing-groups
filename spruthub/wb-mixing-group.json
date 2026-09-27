@@ -1,0 +1,62 @@
+{
+  "name": "Смесительный узел",
+  "manufacturer": "wbmix",
+  "model": "Смесительный узел",
+  "modelIds": [
+    "/devices/([0-9a-zA-Z_]+)/controls/pid_i/meta"
+  ],
+  "services": [
+    {
+      "name": "Уставка выхода",
+      "type": "Thermostat",
+      "characteristics": [
+        {
+          "type": "CurrentTemperature",
+          "link": [
+            {
+              "type": "Double",
+              "topicGet": "/devices/(1)/controls/t_mix"
+            }
+          ]
+        },
+        {
+          "type": "TargetTemperature",
+          "link": [
+            {
+              "type": "Double",
+              "topicGet": "/devices/(1)/controls/setpoint",
+              "topicSet": "/devices/(1)/controls/setpoint/on"
+            }
+          ],
+          "minValue": 20,
+          "maxValue": 70,
+          "minStep": 1
+        },
+        {
+          "type": "CurrentHeatingCoolingState",
+          "link": [
+            {
+              "type": "Integer",
+              "topicGet": "/devices/(1)/controls/enabled",
+              "map": {
+                "OFF": "0",
+                "HEAT": "1"
+              }
+            }
+          ],
+          "validValues": "OFF,HEAT"
+        },
+        {
+          "type": "TargetHeatingCoolingState",
+          "validValues": "HEAT",
+          "option": true
+        },
+        {
+          "type": "TemperatureDisplayUnits",
+          "validValues": "CELSIUS",
+          "option": true
+        }
+      ]
+    }
+  ]
+}

@@ -204,5 +204,21 @@ const exampleFilled = filledTopics(example, [], '');
 check('в wb-mixing-groups.conf.example топики пустые', exampleFilled.length === 0, exampleFilled.slice(0, 3).join(', '));
 check('пример с комментариями валиден по схеме', validate(JSON.parse(JSON.stringify(example))), JSON.stringify((validate.errors || [])[0]));
 
+console.log('\n9. Шаблон Sprut.hub');
+// Шаблон обращается к контролам виртуального устройства по id. Переименуют
+// контрол в коде — Sprut.hub молча перестанет видеть уставку.
+const tpl = JSON.parse(fs.readFileSync(path.join(ROOT, 'spruthub/wb-mixing-group.json'), 'utf8'));
+const tplSrc = JSON.stringify(tpl);
+const groupSrc = fs.readFileSync(path.join(ROOT, 'etc/wb-rules-modules/wbmix-group.js'), 'utf8');
+const tplControls = [...new Set([...tplSrc.matchAll(/\/controls\/([a-z_]+)/g)].map((m) => m[1]))];
+const missingCtl = tplControls.filter((c) => !new RegExp('cells\\.' + c + ' = ').test(groupSrc));
+check('шаблон ссылается только на существующие контролы: ' + tplControls.join(', '), missingCtl.length === 0, missingCtl.join(', '));
+const modelRe = new RegExp('^' + tpl.modelIds[0] + '$');
+const found = ['mix_floor', 'mix_rad', 'Kotel2'].map((id) => ('/devices/' + id + '/controls/pid_i/meta').match(modelRe));
+check('маска находит узлы с любым допустимым id', found.every((m, i) => m && m[1] === ['mix_floor', 'mix_rad', 'Kotel2'][i]));
+check('чужие устройства маска не находит', !modelRe.test('/devices/wb-mr6c_45/controls/K1/meta'));
+const sets = [...tplSrc.matchAll(/"topicSet":"([^"]+)"/g)].map((m) => m[1]);
+check('уставка пишется в топик /on', sets.length === 1 && sets[0] === '/devices/(1)/controls/setpoint/on', sets.join(', '));
+
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 process.exit(fail ? 1 : 0);

@@ -1407,7 +1407,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       };
 
       cells.setpoint = {
-        title: { en: 'Setpoint', ru: 'Уставка подачи' },
+        title: { en: 'Outlet setpoint', ru: 'Уставка выхода' },
         type: 'range',
         value: U.def(cfg.defaultSetpoint, 35),
         min: this.spMin,
@@ -1948,7 +1948,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       else if (tMix < hardMax - this.tMaxHyst) this.limitActive = false;
 
       if (this.limitActive) {
-        this._alarm('overheat', 'перегрев подачи: ' + U.round(tMix, 1) + ' °C, клапан закрыт');
+        this._alarm('overheat', 'перегрев на выходе: ' + U.round(tMix, 1) + ' °C, клапан закрыт');
         this._setState('limit');
         this._forceClose();
         // Интегратор подтягиваем к нулю, чтобы после снятия перегрева
