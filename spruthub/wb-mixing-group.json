@@ -48,8 +48,18 @@
         },
         {
           "type": "TargetHeatingCoolingState",
-          "validValues": "HEAT",
-          "option": true
+          "link": [
+            {
+              "type": "Integer",
+              "topicGet": "/devices/(1)/controls/enabled",
+              "topicSet": "/devices/(1)/controls/enabled/on",
+              "map": {
+                "OFF": "0",
+                "HEAT": "1"
+              }
+            }
+          ],
+          "validValues": "OFF,HEAT"
         },
         {
           "type": "TemperatureDisplayUnits",
@@ -57,6 +67,41 @@
           "option": true
         }
       ]
+    }
+  ],
+  "options": [
+    {
+      "name": "Состояние",
+      "type": "String",
+      "link": [
+        {
+          "type": "String",
+          "topicGet": "/devices/(1)/controls/state"
+        }
+      ],
+      "inputType": "STATUS"
+    },
+    {
+      "name": "Авария",
+      "type": "Boolean",
+      "link": [
+        {
+          "type": "Boolean",
+          "topicGet": "/devices/(1)/controls/alarm"
+        }
+      ],
+      "inputType": "STATUS"
+    },
+    {
+      "name": "Описание аварии",
+      "type": "String",
+      "link": [
+        {
+          "type": "String",
+          "topicGet": "/devices/(1)/controls/alarm_text"
+        }
+      ],
+      "inputType": "STATUS"
     }
   ]
 }

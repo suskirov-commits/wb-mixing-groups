@@ -217,8 +217,12 @@ const modelRe = new RegExp('^' + tpl.modelIds[0] + '$');
 const found = ['mix_floor', 'mix_rad', 'Kotel2'].map((id) => ('/devices/' + id + '/controls/pid_i/meta').match(modelRe));
 check('маска находит узлы с любым допустимым id', found.every((m, i) => m && m[1] === ['mix_floor', 'mix_rad', 'Kotel2'][i]));
 check('чужие устройства маска не находит', !modelRe.test('/devices/wb-mr6c_45/controls/K1/meta'));
-const sets = [...tplSrc.matchAll(/"topicSet":"([^"]+)"/g)].map((m) => m[1]);
-check('уставка пишется в топик /on', sets.length === 1 && sets[0] === '/devices/(1)/controls/setpoint/on', sets.join(', '));
+const sets = [...tplSrc.matchAll(/"topicSet":"([^"]+)"/g)].map((m) => m[1]).sort();
+check(
+  'из приложения пишутся только уставка и вкл/выкл, через /on',
+  sets.join() === '/devices/(1)/controls/enabled/on,/devices/(1)/controls/setpoint/on',
+  sets.join(', ')
+);
 
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 process.exit(fail ? 1 : 0);
