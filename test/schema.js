@@ -16,6 +16,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const Ajv = require('ajv-draft-04');
 
 const ROOT = path.join(__dirname, '..');
@@ -181,6 +182,27 @@ for (const branch of groupProps.actuator.oneOf) {
   checkSection('actuator', def.properties);
 }
 check('все поля схемы читаются кодом', unused.length === 0, unused.join(', '));
+
+console.log('\n8. Эталонные конфиги без адресов оборудования');
+// Адреса модулей на каждом объекте свои. Правдоподобный адрес в эталоне
+// сразу после установки переключил бы чужое реле, если такой модуль
+// на объекте есть.
+function filledTopics(node, out, p) {
+  if (!node || typeof node !== 'object') return out;
+  for (const k of Object.keys(node)) {
+    const v = node[k];
+    if (expected.includes(k) && typeof v === 'string' && v !== '') out.push(p + k + '=' + v);
+    else filledTopics(v, out, p + k + '.');
+  }
+  return out;
+}
+const confFilled = filledTopics(conf, [], '');
+check('в wb-mixing-groups.conf топики пустые', confFilled.length === 0, confFilled.slice(0, 3).join(', '));
+const exampleSrc = fs.readFileSync(path.join(ROOT, 'etc/wb-mixing-groups.conf.example'), 'utf8');
+const example = vm.runInNewContext('(' + exampleSrc.slice(exampleSrc.indexOf('{')) + ')');
+const exampleFilled = filledTopics(example, [], '');
+check('в wb-mixing-groups.conf.example топики пустые', exampleFilled.length === 0, exampleFilled.slice(0, 3).join(', '));
+check('пример с комментариями валиден по схеме', validate(JSON.parse(JSON.stringify(example))), JSON.stringify((validate.errors || [])[0]));
 
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 process.exit(fail ? 1 : 0);

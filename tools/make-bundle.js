@@ -116,6 +116,10 @@ out += `  /* ---------------- точка входа ---------------- */
     return;
   }
 
+  // Все узлы проверяются разом до запуска любого из них: одно реле
+  // в двух узлах видно только на полном списке.
+  var problems = GROUP.checkGroups(CONFIG.groups);
+
   for (var i = 0; i < CONFIG.groups.length; i++) {
     var g = CONFIG.groups[i];
     if (!g || !g.id) {
@@ -123,7 +127,7 @@ out += `  /* ---------------- точка входа ---------------- */
       continue;
     }
     try {
-      GROUP.create(g);
+      GROUP.create(g, problems[g.id]);
     } catch (e) {
       log.error('wbmix: не удалось создать узел "{}": {}', g.id, e);
     }

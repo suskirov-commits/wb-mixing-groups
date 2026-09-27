@@ -523,13 +523,19 @@ AnalogActuator.prototype.stats = function () {
 
 /* ================================================================== */
 
+/** Аналоговый ли привод по полю type (с синонимами). */
+function isAnalog(type) {
+  type = (type || 'tristate').toLowerCase();
+  return type === 'analog' || type === '0-10v' || type === 'modulating';
+}
+
 /**
  * Фабрика: создаёт нужную реализацию по cfg.type.
  * @param {Object} cfg  { type: "tristate"|"analog", ... }
  */
 function create(cfg, ctx) {
   var type = (cfg && cfg.type ? cfg.type : 'tristate').toLowerCase();
-  if (type === 'analog' || type === '0-10v' || type === 'modulating') {
+  if (isAnalog(type)) {
     return new AnalogActuator(cfg, ctx);
   }
   if (type === 'tristate' || type === '3point' || type === 'floating' || type === 'phase') {
@@ -539,5 +545,6 @@ function create(cfg, ctx) {
 }
 
 exports.create = create;
+exports.isAnalog = isAnalog;
 exports.TristateActuator = TristateActuator;
 exports.AnalogActuator = AnalogActuator;

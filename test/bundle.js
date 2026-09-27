@@ -35,7 +35,8 @@ function runDue() {
 const store = {},
   meta = {},
   rules = [],
-  devices = {};
+  devices = {},
+  writes = []; // топики, в которые что-то записал код
 function setDev(topic, v) {
   const old = store[topic];
   store[topic] = v;
@@ -55,7 +56,10 @@ const devProxy = new Proxy(
     },
     set(_, k, v) {
       if (k.indexOf('#') >= 0) meta[k] = v;
-      else setDev(k, v);
+      else {
+        writes.push(k);
+        setDev(k, v);
+      }
       return true;
     }
   }
@@ -112,24 +116,24 @@ const ctx = vm.createContext({
   console
 });
 
-/* --- подменяем топики из примера конфига на стендовые --- */
-let src = fs.readFileSync(BUNDLE, 'utf8');
-const MAP = {
-  'wb-w1/28-00000a1b2c3d': 'x/in',
-  'wb-w1/28-00000a1b2c4e': 'x/mix_f',
-  'wb-w1/28-00000a1b2c5f': 'x/ret_f',
-  'wb-w1/28-00000a1b2c60': 'x/out',
-  'wb-w1/28-00000a1b2c71': 'x/mix_r',
-  'wb-w1/28-00000a1b2c82': 'x/ret_r',
-  'wb-mr6c_45/K1': 'x/open_f',
-  'wb-mr6c_45/K2': 'x/close_f',
-  'wb-mr6c_45/K3': 'x/pump_f',
-  'wb-mr6c_45/K4': 'x/pump_r',
-  'wb-mao4_21/Channel 1': 'x/ao_r'
-};
-for (const [k, v] of Object.entries(MAP)) src = src.split(k).join(v);
+/* --- в эталоне топики пустые: вписываем в CONFIG стендовые --- */
+const stockSrc = fs.readFileSync(BUNDLE, 'utf8');
+const HEAD = 'var CONFIG = ';
+const cStart = stockSrc.indexOf(HEAD) + HEAD.length;
+// конфигурация кончается перед баннером секции «К О Д»
+const cEnd = stockSrc.lastIndexOf(';', stockSrc.indexOf('К О Д', cStart));
+const CONFIG = vm.runInNewContext('(' + stockSrc.slice(cStart, cEnd) + ')');
+const [floor, rad] = CONFIG.groups;
+Object.assign(floor.sensors, { supplyIn: 'x/in', supplyOut: 'x/mix_f', returnLine: 'x/ret_f', outdoor: 'x/out' });
+Object.assign(floor.actuator, { open: 'x/open_f', close: 'x/close_f' });
+floor.pump.topic = 'x/pump_f';
+Object.assign(rad.sensors, { supplyIn: 'x/in', supplyOut: 'x/mix_r', returnLine: 'x/ret_r', outdoor: 'x/out' });
+rad.actuator.out = 'x/ao_r';
+rad.pump.topic = 'x/pump_r';
+const src = stockSrc.slice(0, cStart) + JSON.stringify(CONFIG, null, 2) + stockSrc.slice(cEnd);
 
-for (const t of Object.values(MAP)) {
+const TOPICS = ['x/in', 'x/mix_f', 'x/ret_f', 'x/out', 'x/mix_r', 'x/ret_r', 'x/open_f', 'x/close_f', 'x/pump_f', 'x/pump_r', 'x/ao_r'];
+for (const t of TOPICS) {
   store[t] = t.indexOf('open') >= 0 || t.indexOf('close') >= 0 || t.indexOf('pump') >= 0 ? false : 20;
   meta[t + '#error'] = '';
 }
@@ -144,8 +148,26 @@ const check = (n, c, d) =>
 
 console.log('\n=== ОДНОФАЙЛОВАЯ СБОРКА ===\n');
 
-console.log('1. Загрузка файла');
+console.log('0. Файл как есть, с эталонной конфигурацией');
+// Адреса модулей на каждом объекте свои: скрипт, вставленный в «Правила»
+// без правки CONFIG, не должен переключить ни одного чужого реле.
 let loadErr = null;
+try {
+  vm.runInContext(stockSrc, ctx, { filename: 'wb-mixing-groups.js' });
+} catch (e) {
+  loadErr = e;
+}
+check('файл выполнился без ошибок', loadErr === null, loadErr && loadErr.message);
+for (let s = 0; s < 300; s++) {
+  vnow += 1000;
+  runDue();
+}
+const foreign = [...new Set(writes.filter((t) => !/^(mix_floor|mix_rad)\//.test(t)))];
+check('в чужие топики ничего не записано', foreign.length === 0, foreign.join(', '));
+check('узлы ждут настройки', store['mix_floor/state'] === 'Ошибка настройки', store['mix_floor/state']);
+logs.length = 0;
+
+console.log('\n1. Загрузка файла с настроенными топиками');
 try {
   vm.runInContext(src, ctx, { filename: 'wb-mixing-groups.js' });
 } catch (e) {

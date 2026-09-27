@@ -41,19 +41,19 @@ var CONFIG = {
 
       "sensors": {
         // Обязательные
-        "supplyIn":   "wb-w1/28-00000a1b2c3d",   // вход узла, от котла
-        "supplyOut":  "wb-w1/28-00000a1b2c4e",   // выход узла, в контур
+        "supplyIn":   "",   // вход узла, от котла, напр. "wb-w1/28-00000a1b2c3d"
+        "supplyOut":  "",   // выход узла, в контур
         // Необязательные, но очень желательные
-        "returnLine": "wb-w1/28-00000a1b2c5f",   // обратка контура в узел
-        "outdoor":    "wb-w1/28-00000a1b2c60",   // улица (нужен для кривой)
-        "room":       null,                       // датчик в помещении
+        "returnLine": "",   // обратка контура в узел
+        "outdoor":    "",   // улица (нужен для кривой)
+        "room":       "",   // датчик в помещении
         "tau": 5                                  // постоянная фильтра, с
       },
 
       "actuator": {
         "type": "tristate",                       // фазный 3-точечный привод
-        "open":  "wb-mr6c_45/K1",                 // реле «открыть»
-        "close": "wb-mr6c_45/K2",                 // реле «закрыть»
+        "open":  "",                              // реле «открыть», напр. "wb-mr6c_45/K1"
+        "close": "",                              // реле «закрыть»
         "travelTime": 120,                        // ПАСПОРТНОЕ время хода, с
         "travelTimeClose": 120,
         "minPulse": 500,                          // мин. импульс, мс
@@ -66,19 +66,19 @@ var CONFIG = {
       },
 
       "pump": {
-        "topic": "wb-mr6c_45/K3",
+        "topic": "",                              // реле насоса, пусто — насосом управляет не узел
         "postRun": 300,                           // выбег насоса, с
         "antiStickDays": 7
       },
 
       "demand": {
         // Запрос тепла источнику (реле на клеммы котла / вход OpenTherm-модуля)
-        "topic": null,
+        "topic": "",
         "band": 1
       },
 
       "control": {
-        "period": 20,          // такт регулирования, с (для 3-точечного 15..30)
+        "period": 0,           // такт, с. 0 — по типу привода: фазный 20, 0-10 В 5
         "kp": 3.0,             // %/К
         "ki": 0.012,           // %/(К·с)
         "kd": 0,
@@ -87,6 +87,7 @@ var CONFIG = {
         "setpointMax": 45,
         "setpointRamp": 2,     // К/мин — плавный вывод на уставку
         "loopDeltaT": 7,       // расчётный перепад контура, К (если нет датчика обратки)
+        "valveCurve": 1,       // характеристика крана R: 1 линейная, 20..50 равнопроцентная
         "minAuthority": 3,     // мин. (Tвх − Tобр) для работы модели, К
         "feedForward": true,
         "readyBand": 1.0
@@ -102,7 +103,7 @@ var CONFIG = {
         "frostPosition": 40,
         "deviationAlarm": 8,         // К
         "deviationAlarmDelay": 900,  // с
-        "emergencyInput": null,      // топик аварийного термостата (сухой контакт)
+        "emergencyInput": "",        // топик аварийного термостата (сухой контакт)
         "emergencyInputInvert": false
       },
 
@@ -136,35 +137,35 @@ var CONFIG = {
       "defaultSetpoint": 50,
 
       "sensors": {
-        "supplyIn":   "wb-w1/28-00000a1b2c3d",   // тот же вход от котла
-        "supplyOut":  "wb-w1/28-00000a1b2c71",
-        "returnLine": "wb-w1/28-00000a1b2c82",
-        "outdoor":    "wb-w1/28-00000a1b2c60",
-        "room":       null,
+        "supplyIn":   "",   // может быть тот же датчик входа, что у пола
+        "supplyOut":  "",
+        "returnLine": "",
+        "outdoor":    "",
+        "room":       "",
         "tau": 5
       },
 
       "actuator": {
         "type": "analog",
-        "out": "wb-mao4_21/Channel 1",
+        "out": "",                 // канал WB-MAO4, напр. "wb-mao4_21/Channel 1"
         "outUnits": "mv",          // WB-MAO4 в режиме 0-10 В: 0..10000 мВ
         "vMin": 0,                 // для привода 2-10 В поставить 2000
         "vMax": 10000,
         "invert": false,
-        "feedback": null,          // топик обратной связи по положению, если есть
+        "feedback": "",            // топик обратной связи по положению, если есть
         "rateLimit": 0,            // %/с, 0 = без ограничения
         "posMin": 0,
         "posMax": 100
       },
 
       "pump": {
-        "topic": "wb-mr6c_45/K4",
+        "topic": "",
         "postRun": 300,
         "antiStickDays": 7
       },
 
       "control": {
-        "period": 5,
+        "period": 0,
         "kp": 2.5,
         "ki": 0.02,
         "kd": 0,
@@ -173,6 +174,7 @@ var CONFIG = {
         "setpointMax": 70,
         "setpointRamp": 0,
         "loopDeltaT": 10,
+        "valveCurve": 1,
         "minAuthority": 3,
         "feedForward": true,
         "readyBand": 1.0
@@ -1120,13 +1122,19 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
 
     /* ================================================================== */
 
+    /** Аналоговый ли привод по полю type (с синонимами). */
+    function isAnalog(type) {
+      type = (type || 'tristate').toLowerCase();
+      return type === 'analog' || type === '0-10v' || type === 'modulating';
+    }
+
     /**
      * Фабрика: создаёт нужную реализацию по cfg.type.
      * @param {Object} cfg  { type: "tristate"|"analog", ... }
      */
     function create(cfg, ctx) {
       var type = (cfg && cfg.type ? cfg.type : 'tristate').toLowerCase();
-      if (type === 'analog' || type === '0-10v' || type === 'modulating') {
+      if (isAnalog(type)) {
         return new AnalogActuator(cfg, ctx);
       }
       if (type === 'tristate' || type === '3point' || type === 'floating' || type === 'phase') {
@@ -1136,6 +1144,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
     }
 
     exports.create = create;
+    exports.isAnalog = isAnalog;
     exports.TristateActuator = TristateActuator;
     exports.AnalogActuator = AnalogActuator;
 
@@ -1175,6 +1184,8 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
      *      из ручного режима.
      *
      * ЗАЩИТЫ:
+     *   - проверка конфигурации до запуска: не заданы обязательные топики
+     *     или одно реле достаётся двум узлам — узел не запускается;
      *   - жёсткий верхний предел T_mix (перегрев стяжки) с гистерезисом;
      *   - мягкое ограничение уставки на подходе к пределу;
      *   - внешний аварийный термостат (сухой контакт);
@@ -1203,18 +1214,39 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       manual: 'Ручной режим',
       calibrating: 'Калибровка привода',
       frost: 'Защита от замерзания',
-      fault: 'Авария'
+      fault: 'Авария',
+      config: 'Ошибка настройки'
     };
+
+    /**
+     * Характеристика крана: доля горячего потока q (0..1) -> положение (0..1).
+     *
+     * Модель смешения даёт именно долю потока, а кран отдаёт её не линейно
+     * по положению. На первом объекте при упреждении 25 % кран реально стоял
+     * на 67 %, и разницу нёс интегратор — выход на новую уставку шёл 10–20 мин.
+     *
+     *   R = 1  — линейная: x = q;
+     *   R > 1  — равнопроцентная, нормированная так, чтобы 0 -> 0 и 1 -> 1:
+     *            q = (R^x − 1) / (R − 1)  =>  x = ln(1 + q·(R − 1)) / ln R.
+     * Типовые R равнопроцентных кранов — 20…50.
+     */
+    function valvePosition(q, r) {
+      if (!(r > 1)) return q;
+      return Math.log(1 + q * (r - 1)) / Math.log(r);
+    }
 
     /* ================================================================== */
 
     /**
      * @param {Object} cfg см. README и /etc/wb-mixing-groups.conf
+     * @param {Array} problems ошибки конфигурации (см. checkGroups):
+     *                если есть, узел не запускается
      */
-    function MixingGroup(cfg) {
+    function MixingGroup(cfg, problems) {
       this.cfg = cfg;
       this.id = cfg.id;
       this.title = cfg.title || cfg.id;
+      this.problems = problems || [];
 
       var self = this;
       this.log = {
@@ -1234,13 +1266,20 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
 
       /* ---------- параметры регулирования ---------- */
       var c = cfg.control || {};
-      this.periodMs = U.def(c.period, cfg.actuator && cfg.actuator.type === 'analog' ? 5 : 20) * 1000;
+      // Такт 0 (или не задан) — по типу привода: фазному 20 с, аналоговому 5 с.
+      // Явное число не пересчитывается, когда в форме меняют тип привода:
+      // на объекте узел из эталона переключили с 0-10 В на фазный, и такт
+      // остался 5 с. Поэтому эталон и форма по умолчанию дают 0.
+      var autoPeriod = cfg.actuator && ACT.isAnalog(cfg.actuator.type) ? 5 : 20;
+      this.periodMs = (c.period > 0 ? c.period : autoPeriod) * 1000;
       this.spMin = U.def(c.setpointMin, 15);
       this.spMax = U.def(c.setpointMax, 60);
       this.spRamp = U.def(c.setpointRamp, 0); // К/мин, 0 = без ограничения
       this.loopDt = U.def(c.loopDeltaT, 7); // расчётный перепад контура, К
       this.minAuthority = U.def(c.minAuthority, 3); // мин. (T_in - T_ret) для FF, К
       this.useFF = U.def(c.feedForward, true);
+      this.valveR = U.def(c.valveCurve, 1); // характеристика крана, 1 = линейная
+      this.valveRUsed = null; // R, с которым считали упреждение в прошлом такте
       this.readyBand = U.def(c.readyBand, 1.0);
 
       /* ---------- защиты ---------- */
@@ -1295,14 +1334,6 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       this.sOut = new U.Sensor(sn.outdoor, { tau: 300, required: false, min: -70, max: 70 });
       this.sRoom = new U.Sensor(sn.room, { tau: 120, required: false, min: -20, max: 60 });
 
-      /* ---------- привод ---------- */
-      this.storage = new PersistentStorage('wbmix_' + this.id, { global: true });
-      this.act = ACT.create(cfg.actuator || {}, {
-        log: this.log,
-        id: this.id,
-        storage: this.storage
-      });
-
       /* ---------- регулятор ---------- */
       this.pid = new PID.Pid({
         kp: U.def(c.kp, 4),
@@ -1324,8 +1355,28 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       this.lastMoveTs = Date.now();
       this.wasEnabled = false;
       this.tickTimer = null;
+      this.act = null;
 
       this._buildDevice();
+
+      // Ошибка конфигурации — узел не запускаем. Привод не создаём вовсе:
+      // уже его конструктор снимает команды с реле, а реле может оказаться
+      // чужим — принадлежать другому узлу или другому оборудованию объекта.
+      if (this.problems.length) {
+        this._setState('config');
+        this._alarm('config', 'узел не запущен — ' + this.problems.join('; '));
+        this._publishAlarms();
+        return;
+      }
+
+      /* ---------- привод ---------- */
+      this.storage = new PersistentStorage('wbmix_' + this.id, { global: true });
+      this.act = ACT.create(cfg.actuator || {}, {
+        log: this.log,
+        id: this.id,
+        storage: this.storage
+      });
+
       this._defineRules();
       this._start();
     }
@@ -1506,6 +1557,17 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
         max: 500
       };
 
+      // Подбирается на лету: R верный, когда в установившемся режиме
+      // «Интегратор ПИ» держится около нуля — упреждение само ставит кран
+      // туда, где он должен стоять.
+      cells.valve_curve = {
+        title: { en: 'Valve curve R (1 = linear)', ru: 'Характеристика крана R (1 = линейная)' },
+        type: 'range',
+        value: this.valveR,
+        min: 1,
+        max: 100
+      };
+
       cells.curve_slope = {
         title: { en: 'Curve slope', ru: 'Наклон кривой, %' },
         type: 'range',
@@ -1544,7 +1606,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
         't_in', 't_mix', 't_ret', 't_out', 't_room',
         'deviation', 'position', 'position_cmd', 'ff', 'pid_i',
         'state', 'alarm', 'alarm_text', 'pump',
-        'max_supply', 'kp', 'ki', 'curve_slope', 'curve_shift',
+        'max_supply', 'kp', 'ki', 'valve_curve', 'curve_slope', 'curve_shift',
         'calibrate', 'reset_alarm'
       ];
       for (var i = 0; i < order.length; i++) {
@@ -1677,6 +1739,12 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       }
 
       return U.clamp(sp, this.spMin, this.spMax);
+    };
+
+    /** R характеристики крана: со страницы устройства, иначе из конфига. */
+    MixingGroup.prototype._valveR = function () {
+      var r = U.toNum(dev[this._c('valve_curve')]);
+      return U.isNum(r) && r >= 1 ? r : this.valveR;
     };
 
     /* ================================================================== */
@@ -1859,6 +1927,12 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       //     получит заброс далеко за уставку (транспортное запаздывание
       //     не даёт вовремя закрыться). Для тёплого пола этот заброс
       //     доходит до предела перегрева и поднимает ложную аварию.
+      //     Снижение ограничиваем так же. Пробовали пускать его сразу:
+      //     на стенде (test/sim.js) уставка 35 -> 30 °C тогда даёт провал
+      //     выхода до 27 °C вместо 29,4 °C, а до 30,5 °C выход доходит
+      //     всего на минуту раньше. Скачок уставки бьёт по П-составляющей
+      //     и по упреждению разом, а запаздывание не даёт вовремя
+      //     остановиться — ровно как при пуске, только вниз.
       if (this.spRamp > 0) {
         if (this.targetSp === null) {
           this.targetSp = U.clamp(tMix, this.spMin, sp);
@@ -1899,10 +1973,12 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
 
       var ff = 0;
       var ffValid = false;
+      var r = this._valveR();
       if (this.useFF && tIn !== null) {
         var authority = tIn - tRet;
         if (authority >= this.minAuthority) {
-          ff = U.clamp(((sp - tRet) / authority) * 100, 0, 100);
+          // доля горячего потока -> положение по характеристике крана
+          ff = valvePosition(U.clamp((sp - tRet) / authority, 0, 1), r) * 100;
           ffValid = true;
         } else if (tIn < sp) {
           // Источник холоднее уставки — открываемся полностью,
@@ -1911,6 +1987,13 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
           ffValid = true;
         }
       }
+      // Характеристику сменили на лету — упреждение скачком стало другим
+      // (десятки процентов). Разницу безударно переносим в интегратор,
+      // иначе кран дёрнулся бы на неё целиком.
+      if (ffValid && this.valveRUsed !== null && r !== this.valveRUsed) {
+        this.pid.bumplessReset(this.act.getPosition(), ff);
+      }
+      this.valveRUsed = r;
       this.ff = ffValid ? ff : this.ff;
       this._set('ff', U.round(this.ff, 1));
 
@@ -2074,8 +2157,92 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
         clearInterval(this.tickTimer);
         this.tickTimer = null;
       }
-      this.act.halt();
+      if (this.act) this.act.halt();
     };
+
+    /* ================================================================== */
+    /*  Проверка конфигурации до запуска                                   */
+    /* ================================================================== */
+
+    /** Выходы узла: топик, подпись и признак «управляет приводом». */
+    function outputsOf(cfg) {
+      var a = cfg.actuator || {};
+      var list = [];
+      function add(topic, name, drive) {
+        if (topic) list.push({ topic: topic, name: name, drive: drive });
+      }
+      if (ACT.isAnalog(a.type)) {
+        add(a.out, 'аналоговый выход', true);
+      } else {
+        add(a.open, 'реле «открыть»', true);
+        add(a.close, 'реле «закрыть»', true);
+      }
+      add(cfg.pump && cfg.pump.topic, 'реле насоса', false);
+      add(cfg.demand && cfg.demand.topic, 'реле запроса тепла', false);
+      return list;
+    }
+
+    /** Незаполненные обязательные поля. */
+    function missingOf(cfg) {
+      var s = cfg.sensors || {};
+      var a = cfg.actuator || {};
+      var miss = [];
+      if (!s.supplyIn) miss.push('датчик входа');
+      if (!s.supplyOut) miss.push('датчик выхода');
+      if (ACT.isAnalog(a.type)) {
+        if (!a.out) miss.push('аналоговый выход');
+      } else {
+        if (!a.open) miss.push('реле «открыть»');
+        if (!a.close) miss.push('реле «закрыть»');
+      }
+      return miss.length ? ['не задано: ' + miss.join(', ')] : [];
+    }
+
+    /**
+     * Проверка всех узлов разом, до запуска любого из них.
+     *
+     * 1. Обязательные топики заполнены. Эталонный конфиг поставляется
+     *    с пустыми топиками — адреса модулей на каждом объекте свои.
+     * 2. Выход привода (реле «открыть»/«закрыть», аналоговый выход) не
+     *    встречается дважды: ни в другом узле, ни в роли насоса или запроса
+     *    тепла, ни как «открыть» = «закрыть» в одном узле. Пауза на реверс
+     *    защищает только внутри одного узла; реле, которым командуют два
+     *    узла, включалось бы вразнобой. Общий насос или общий запрос тепла
+     *    у двух узлов ошибкой не считается.
+     *
+     * @param {Array} groups секция groups конфигурации
+     * @returns {Object} id узла -> массив описаний ошибок (пустой — всё в порядке)
+     */
+    function checkGroups(groups) {
+      var res = {};
+      var all = [];
+      for (var i = 0; i < groups.length; i++) {
+        var g = groups[i];
+        if (!g || !g.id) continue;
+        res[g.id] = missingOf(g);
+        var outs = outputsOf(g);
+        for (var j = 0; j < outs.length; j++) {
+          outs[j].id = g.id;
+          outs[j].title = g.title || g.id;
+          all.push(outs[j]);
+        }
+      }
+      for (var x = 0; x < all.length; x++) {
+        for (var y = 0; y < all.length; y++) {
+          var a = all[x];
+          var b = all[y];
+          if (x === y || a.topic !== b.topic || !(a.drive || b.drive)) continue;
+          if (a.id === b.id) {
+            if (y > x) res[a.id].push(a.name + ' и ' + b.name + ' — один и тот же выход ' + a.topic);
+          } else {
+            res[a.id].push(
+              a.name + ' ' + a.topic + ' уже используется как ' + b.name + ' узла «' + b.title + '»'
+            );
+          }
+        }
+      }
+      return res;
+    }
 
     /**
      * Реестр экземпляров живёт в module.static — он общий для всех
@@ -2087,8 +2254,14 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
     if (!module.static.instances) module.static.instances = {};
 
     exports.MixingGroup = MixingGroup;
+    exports.checkGroups = checkGroups;
 
-    exports.create = function (cfg) {
+    /**
+     * @param {Object} cfg конфигурация узла
+     * @param {Array} [problems] результат checkGroups() по всем узлам;
+     *                не передан — узел проверяется сам по себе
+     */
+    exports.create = function (cfg, problems) {
       var reg = module.static.instances;
       if (reg[cfg.id]) {
         try {
@@ -2097,7 +2270,8 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
           log.error('wbmix: не удалось остановить прежний экземпляр {}: {}', cfg.id, e);
         }
       }
-      var g = new MixingGroup(cfg);
+      if (problems === undefined) problems = checkGroups([cfg])[cfg.id];
+      var g = new MixingGroup(cfg, problems);
       reg[cfg.id] = g;
       return g;
     };
@@ -2120,6 +2294,10 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
     return;
   }
 
+  // Все узлы проверяются разом до запуска любого из них: одно реле
+  // в двух узлах видно только на полном списке.
+  var problems = GROUP.checkGroups(CONFIG.groups);
+
   for (var i = 0; i < CONFIG.groups.length; i++) {
     var g = CONFIG.groups[i];
     if (!g || !g.id) {
@@ -2127,7 +2305,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       continue;
     }
     try {
-      GROUP.create(g);
+      GROUP.create(g, problems[g.id]);
     } catch (e) {
       log.error('wbmix: не удалось создать узел "{}": {}', g.id, e);
     }

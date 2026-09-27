@@ -1,6 +1,8 @@
 /**
  * faults.js — проверка защит: обрыв датчика, перегрев, потеря тепла
- * на входе, ручной режим, авария внешнего термостата.
+ * на входе, ручной режим, авария внешнего термостата; проверка
+ * конфигурации при старте (пустые топики, одно реле в двух узлах),
+ * такт по типу привода, характеристика крана.
  *
  * Запуск: node test/faults.js
  */
@@ -30,7 +32,8 @@ function runDue() {
 
 const store = {},
   meta = {},
-  rules = [];
+  rules = [],
+  writes = []; // [топик, значение] — всё, что записал код узлов
 function setDev(topic, v) {
   const old = store[topic];
   store[topic] = v;
@@ -50,7 +53,10 @@ const devProxy = new Proxy(
     },
     set(_, k, v) {
       if (k.indexOf('#') >= 0) meta[k] = v;
-      else setDev(k, v);
+      else {
+        writes.push([k, v]);
+        setDev(k, v);
+      }
       return true;
     }
   }
@@ -389,6 +395,135 @@ setDev('sm_off/mode', 0);
 setDev('sm_off/position_cmd', 50);
 advance(20);
 check('без летнего отключения работает и ручной режим', store['ao/sm_off'] === 5000, String(store['ao/sm_off']));
+
+console.log('\n16. Эталонный конфиг: узлы не запускаются и ничего не переключают');
+// Адреса модулей на каждом объекте свои. Правдоподобные адреса в эталоне
+// (wb-mr6c_45/K1 и т. п.) сразу после установки переключили бы чужое
+// оборудование, если такой модуль на объекте есть.
+const stock = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'etc', 'wb-mixing-groups.conf'), 'utf8'));
+const checkGroups = GROUP.checkGroups || (() => ({}));
+const stockProblems = checkGroups(stock.groups);
+writes.length = 0;
+for (const sg of stock.groups) GROUP.create(sg, stockProblems[sg.id]);
+advance(300);
+const OWN = /^(mg|sm_def|sm_off|sm_null|mix_floor|mix_rad|s|ao)\//;
+const foreign = [...new Set(writes.filter(([t]) => !OWN.test(t)).map(([t]) => t))];
+check('в чужие топики ничего не записано', foreign.length === 0, foreign.join(', '));
+for (const id of ['mix_floor', 'mix_rad']) {
+  check(id + ': состояние «ошибка настройки»', store[id + '/state'] === 'Ошибка настройки', store[id + '/state']);
+  check(id + ': авария поднята', store[id + '/alarm'] === true);
+  check(id + ': в тексте — что не задано', /датчик выхода/.test(store[id + '/alarm_text']), store[id + '/alarm_text']);
+}
+
+console.log('\n17. Одно реле в двух узлах, «открыть» = «закрыть»');
+// Пауза на реверс защищает только внутри одного узла. Реле, которым
+// командуют два узла, или привод, у которого «открыть» и «закрыть» —
+// один выход, узел запускать нельзя: реле будут включаться вразнобой.
+for (const t of ['c/r1', 'c/r2', 'c/r3', 'c/r4', 'c/r6', 'c/r7', 'c/ao']) {
+  store[t] = t === 'c/ao' ? 0 : false;
+  meta[t + '#error'] = '';
+}
+const tri = (open, close) => ({ type: 'tristate', open, close, travelTime: 60, interlock: 0 });
+const node = (id, actuator, pump) => ({
+  id,
+  title: 'Узел ' + id,
+  defaultSetpoint: 35,
+  sensors: { supplyIn: T_IN, supplyOut: T_MIX, tau: 0 },
+  actuator,
+  pump: pump ? { topic: pump } : undefined,
+  control: { period: 10 }
+});
+const set17 = [
+  node('cA', tri('c/r1', 'c/r2')),
+  node('cB', tri('c/r2', 'c/r3')), // c/r2 — «закрыть» узла cA
+  node('cC', tri('c/r4', 'c/r4')),
+  node('cD', { type: 'analog', out: 'c/ao' }, 'c/r1'), // насос на «открыть» узла cA
+  node('cE', tri('c/r6', 'c/r7'))
+];
+const p17 = checkGroups(set17);
+writes.length = 0;
+for (const n of set17) GROUP.create(n, p17[n.id]);
+advance(120);
+for (const id of ['cA', 'cB', 'cC', 'cD']) {
+  check(
+    id + ': узел не запущен, авария',
+    store[id + '/state'] === 'Ошибка настройки' && store[id + '/alarm'] === true,
+    store[id + '/state'] + ' / ' + store[id + '/alarm_text']
+  );
+}
+check('cB: в тексте — с каким узлом конфликт', /Узел cA/.test(store['cB/alarm_text']), store['cB/alarm_text']);
+check('cC: в тексте — «открыть» и «закрыть» совпадают', /открыть.*закрыть/.test(store['cC/alarm_text']), store['cC/alarm_text']);
+check('cD: в тексте — реле насоса', /насос/.test(store['cD/alarm_text']), store['cD/alarm_text']);
+const touched = writes.filter(([t]) => /^c\/(r[1-4]|ao)$/.test(t)).map(([t, v]) => t + '=' + v);
+check('реле и выходы узлов с конфликтом не тронуты', touched.length === 0, touched.join(', '));
+check(
+  'узел без конфликтов работает',
+  store['cE/state'] !== 'Ошибка настройки' && store['cE/alarm'] === false,
+  store['cE/state'] + ' / ' + store['cE/alarm_text']
+);
+
+console.log('\n18. Такт по типу привода');
+// Эталонный такт радиаторов был 5 с — под 0-10 В. На объекте тип привода
+// переключили в форме на фазный, а явный такт так и остался 5 с.
+// Такт 0 = «по типу привода»: фазному 20 с, аналоговому 5 с.
+const stockRad = () => {
+  const g = JSON.parse(JSON.stringify(stock.groups.find((x) => x.id === 'mix_rad')));
+  g.sensors.supplyIn = T_IN;
+  g.sensors.supplyOut = T_MIX;
+  g.pump = {};
+  return g;
+};
+store['c/r8'] = store['c/r9'] = false;
+store['c/ao2'] = 0;
+for (const t of ['c/r8', 'c/r9', 'c/ao2']) meta[t + '#error'] = '';
+const radTri = stockRad();
+radTri.id = 'pr_tri';
+radTri.actuator = { type: 'tristate', open: 'c/r8', close: 'c/r9', travelTime: 120 };
+GROUP.create(radTri);
+const radAna = stockRad();
+radAna.id = 'pr_ana';
+radAna.actuator.out = 'c/ao2';
+GROUP.create(radAna);
+check('эталонный узел, переключённый на фазный привод: такт 20 с', GROUP.get('pr_tri').periodMs === 20000, GROUP.get('pr_tri').periodMs + ' мс');
+check('он же с приводом 0-10 В: такт 5 с', GROUP.get('pr_ana').periodMs === 5000, GROUP.get('pr_ana').periodMs + ' мс');
+
+console.log('\n19. Характеристика крана в упреждении');
+// Без датчика обратки: T_обр = 35 − 7 = 28 °C, доля горячего потока
+// (35 − 28) / (55 − 28) = 0,259. Линейный кран — 25,9 %; равнопроцентный
+// с R = 50 — ln(1 + 0,259 · 49) / ln 50 = 66,9 %. На объекте при
+// упреждении 25 % кран реально стоял на 67 %.
+const R_IN = 'r/in',
+  R_MIX = 'r/mix';
+for (const t of [R_IN, R_MIX]) meta[t + '#error'] = '';
+store[R_IN] = 55;
+store[R_MIX] = 35;
+const valveGroup = (id, valveCurve) => {
+  meta['v/' + id + '#error'] = '';
+  store['v/' + id] = 0;
+  GROUP.create({
+    id,
+    title: id,
+    defaultSetpoint: 35,
+    sensors: { supplyIn: R_IN, supplyOut: R_MIX, tau: 0 },
+    actuator: { type: 'analog', out: 'v/' + id },
+    control: { period: 10, loopDeltaT: 7, valveCurve }
+  });
+};
+valveGroup('vl');
+valveGroup('ve', 50);
+advance(20);
+check('линейный кран: упреждение 25,9 %', Math.abs(store['vl/ff'] - 25.9) < 0.2, String(store['vl/ff']));
+check('равнопроцентный, R = 50: упреждение 66,9 %', Math.abs(store['ve/ff'] - 66.9) < 0.3, String(store['ve/ff']));
+const posBefore = store['vl/position'];
+setDev('vl/valve_curve', 50);
+advance(10);
+check('R меняется на лету со страницы устройства', Math.abs(store['vl/ff'] - 66.9) < 0.3, String(store['vl/ff']));
+check('смена R не дёргает кран', Math.abs(store['vl/position'] - posBefore) < 1, posBefore + ' -> ' + store['vl/position']);
+check(
+  'разницу принял интегратор',
+  Math.abs(store['vl/pid_i'] - (posBefore - 66.9)) < 1,
+  String(store['vl/pid_i'])
+);
 
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 if (fail) {

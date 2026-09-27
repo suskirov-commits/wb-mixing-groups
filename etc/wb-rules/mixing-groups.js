@@ -32,6 +32,10 @@ var CONF_PATH = '/etc/wb-mixing-groups.conf';
     return;
   }
 
+  // Все узлы проверяются разом до запуска любого из них: одно реле
+  // в двух узлах видно только на полном списке.
+  var problems = GROUP.checkGroups(conf.groups);
+
   for (var i = 0; i < conf.groups.length; i++) {
     var g = conf.groups[i];
     if (!g || !g.id) {
@@ -39,7 +43,7 @@ var CONF_PATH = '/etc/wb-mixing-groups.conf';
       continue;
     }
     try {
-      GROUP.create(g);
+      GROUP.create(g, problems[g.id]);
     } catch (e) {
       log.error('wbmix: не удалось создать узел "{}": {}', g.id, e);
     }
