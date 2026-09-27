@@ -4,10 +4,15 @@ name: release
 #
 #   git tag v1.0.0 && git push --tags
 #
-# После этого на контроллере:
+# После этого на контроллере (установка и обновление):
 #
-#   wget https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download/wb-mixing-groups_all.deb
-#   dpkg -i wb-mixing-groups_all.deb
+#   U=https://github.com/suskirov-commits/wb-mixing-groups/releases/latest/download
+#   wget -O /tmp/wbmix.deb $U/wb-mixing-groups_all.deb && dpkg -i --force-confold /tmp/wbmix.deb
+#
+# Текст страницы релиза задаётся ниже, в body. Команда в нём обязана
+# совпадать с README: с v1.0.5 эталонный конфиг изменился, и без
+# --force-confold dpkg на объекте с правленым конфигом останавливается
+# с вопросом (а без терминала — с ошибкой).
 
 on:
   workflow_dispatch:
@@ -99,7 +104,7 @@ jobs:
 
             ```sh
             U=https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
-            wget -O /tmp/wbmix.deb $U/wb-mixing-groups_all.deb && dpkg -i /tmp/wbmix.deb
+            wget -O /tmp/wbmix.deb $U/wb-mixing-groups_all.deb && dpkg -i --force-confold /tmp/wbmix.deb
             cat /usr/share/wbmix/VERSION
             ```
 
@@ -109,7 +114,9 @@ jobs:
             Тот же пакет подходит для Wiren Board 6, 7 и 8 — внутри только
             JavaScript и JSON, архитектура `all`. Конфигурация
             `/etc/wb-mixing-groups.conf` объявлена в `conffiles`, поэтому
-            dpkg не затрёт настройки объекта.
+            dpkg не затрёт настройки объекта. Ключ `--force-confold` оставляет
+            конфигурацию объекта без вопроса, даже если эталон в пакете
+            изменился; новый эталон ложится рядом как `.dpkg-dist`.
 
             После установки: веб-интерфейс → **Настройки** →
             **«Смесительные узлы (отопление)»**.

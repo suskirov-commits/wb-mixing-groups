@@ -207,7 +207,7 @@ check('пример с комментариями валиден по схеме
 console.log('\n9. Шаблон Sprut.hub');
 // Шаблон обращается к контролам виртуального устройства по id. Переименуют
 // контрол в коде — Sprut.hub молча перестанет видеть уставку.
-const tpl = JSON.parse(fs.readFileSync(path.join(ROOT, 'spruthub/wb-mixing-group.json'), 'utf8'));
+const tpl = JSON.parse(fs.readFileSync(path.join(ROOT, 'spruthub/spruthub-mixing-group.json'), 'utf8'));
 const tplSrc = JSON.stringify(tpl);
 const groupSrc = fs.readFileSync(path.join(ROOT, 'etc/wb-rules-modules/wbmix-group.js'), 'utf8');
 const tplControls = [...new Set([...tplSrc.matchAll(/\/controls\/([a-z_]+)/g)].map((m) => m[1]))];
@@ -231,6 +231,22 @@ check(
   sets.join() === '/devices/(1)/controls/enabled/on,/devices/(1)/controls/setpoint/on',
   sets.join(', ')
 );
+
+console.log('\n10. Команда установки: README и страница релиза');
+// Текст страницы релиза пишет CI из body в release.yml. В v1.0.5 ключ
+// --force-confold добавили в README, а в release.yml забыли: на страницах
+// релизов осталась команда, на которой dpkg останавливается с вопросом
+// про конфиг объекта.
+const installLines = (src) =>
+  src
+    .split('\n')
+    .map((l) => l.trim().replace(/^#\s*/, ''))
+    .filter((l) => /wget -O/.test(l) && /dpkg -i /.test(l));
+const INSTALL = 'dpkg -i --force-confold /tmp/wbmix.deb';
+const readmeCmds = installLines(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8'));
+const releaseCmds = installLines(fs.readFileSync(path.join(ROOT, '.github/workflows/release.yml'), 'utf8'));
+check('в README команда с wget -O и --force-confold', readmeCmds.length >= 2 && readmeCmds.every((l) => l.includes(INSTALL)), readmeCmds.join(' | '));
+check('на странице релиза та же команда', releaseCmds.length >= 1 && releaseCmds.every((l) => l.includes(INSTALL)), releaseCmds.join(' | '));
 
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 process.exit(fail ? 1 : 0);
