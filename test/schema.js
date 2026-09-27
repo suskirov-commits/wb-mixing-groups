@@ -218,6 +218,14 @@ const found = ['mix_floor', 'mix_rad', 'Kotel2'].map((id) => ('/devices/' + id +
 check('маска находит узлы с любым допустимым id', found.every((m, i) => m && m[1] === ['mix_floor', 'mix_rad', 'Kotel2'][i]));
 check('чужие устройства маска не находит', !modelRe.test('/devices/wb-mr6c_45/controls/K1/meta'));
 const sets = [...tplSrc.matchAll(/"topicSet":"([^"]+)"/g)].map((m) => m[1]).sort();
+// Авария — отдельный датчик контакта: на него в Sprut.hub и в Apple «Дом»
+// включаются push-уведомления. Статусные поля уведомлений не дают.
+const alarmSensor = tpl.services.find((sv) => sv.type === 'ContactSensor');
+check(
+  'авария — датчик контакта по контролу alarm (для push-уведомлений)',
+  !!alarmSensor && JSON.stringify(alarmSensor).includes('"topicGet":"/devices/(1)/controls/alarm"'),
+  JSON.stringify(alarmSensor)
+);
 check(
   'из приложения пишутся только уставка и вкл/выкл, через /on',
   sets.join() === '/devices/(1)/controls/enabled/on,/devices/(1)/controls/setpoint/on',
