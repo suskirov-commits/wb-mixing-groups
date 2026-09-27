@@ -181,5 +181,56 @@ t3.halt();
 check('halt снимает оба реле', store['r/open'] === false && store['r/close'] === false);
 check('позиция учла частичный ход', t3.getPosition() > 0 && t3.getPosition() < 50, t3.getPosition());
 
+// halt посреди калибровки, колбэк которой сразу запускает обратный прогон
+// (так устроено антизалипание: открыть -> закрыть). halt не должен затереть
+// pinTo уже нового прогона — иначе позиция не прибьётся к упору.
+t3.calibrate(1, function () {
+  t3.calibrate(-1, null);
+});
+tick(5000);
+check('идёт прогон на открытие', store['r/open'] === true);
+t3.halt();
+check('колбэк сразу запустил прогон на закрытие', store['r/close'] === true);
+tick(125000);
+check('прогон из колбэка прибил позицию к 0 %', t3.getPosition() === 0, t3.getPosition());
+check('и обнулил накопленный ход', t3.stats().travelAcc === 0, t3.stats().travelAcc);
+
+/* ---------------- пауза на реверс ---------------- */
+console.log('\n=== Пауза на реверс (interlock 300 мс) ===');
+const t4 = ACT.create(
+  {
+    type: 'tristate',
+    open: 'r4/open',
+    close: 'r4/close',
+    travelTime: 100,
+    minPulse: 500,
+    deadband: 1.5,
+    interlock: 300
+  },
+  { storage: {}, log: logFn, id: 'v4' }
+);
+t4.apply(0, 20000);
+tick(130000);
+check('калибровка с паузой прошла, позиция достоверна', t4.isPositionTrusted() === true);
+
+t4.apply(30, 20000);
+check('в паузе реле ещё не включено', store['r4/open'] === false);
+check('в паузе привод считается занятым', t4.isBusy() === true);
+check('в паузе ход на открытие уже виден защитам', t4.isOpening() === true);
+check('повторная команда в паузе не перезапускает ход', t4.apply(30, 20000) === 'busy');
+t4.halt();
+tick(1000);
+check('halt в паузе отменяет старт — реле так и не включилось', store['r4/open'] === false && store['r4/close'] === false);
+check('после halt привод свободен', t4.isBusy() === false && t4.isOpening() === false);
+
+t4.apply(30, 20000);
+tick(1000);
+check('без halt после паузы реле включается', store['r4/open'] === true);
+check('ход на открытие виден и во время движения', t4.isOpening() === true);
+tick(20000);
+
+const a0 = ACT.create({ type: 'analog', out: 'ao/x' }, { log: logFn, id: 'a0' });
+check('аналоговый привод никогда не «в ходе на открытие»', a0.isOpening() === false);
+
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 process.exit(fail ? 1 : 0);

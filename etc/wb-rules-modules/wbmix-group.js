@@ -131,6 +131,11 @@ function MixingGroup(cfg) {
     tSupDesign: U.def(w.supplyDesign, 35),
     tRetDesign: U.def(w.returnDesign, 28),
     n: U.def(w.exponent, 1.1),
+    // Летнее отключение выключаемо: тёплый пол на грунте работает круглый
+    // год, иначе плита остывает от земли. Явный null в summerCutoff тоже
+    // означает «выключено» — так задумывалось изначально, но U.def()
+    // превращал null в 16, и отключить лето было невозможно.
+    summerShutdown: w.summerShutdown !== false && w.summerCutoff !== null,
     summerCutoff: U.def(w.summerCutoff, 16),
     summerHyst: U.def(w.summerHyst, 2),
     roomGain: U.def(w.roomGain, 2)
@@ -608,7 +613,7 @@ MixingGroup.prototype._tick = function () {
   }
 
   // Летнее отключение по наружной температуре
-  if (this.sOut.ok() && this.curve.summerCutoff !== null) {
+  if (this.curve.summerShutdown && this.sOut.ok()) {
     if (!this.summer && this.sOut.value > this.curve.summerCutoff) this.summer = true;
     else if (this.summer && this.sOut.value < this.curve.summerCutoff - this.curve.summerHyst)
       this.summer = false;
@@ -634,7 +639,7 @@ MixingGroup.prototype._tick = function () {
   // 3.2 Внешняя авария
   if (emergency) {
     this._setState('fault');
-    this.act.apply(0, this.periodMs);
+    this._forceClose();
     this._pump(true, now); // насос гоняем, чтобы снять тепло с контура
     this._finish(now);
     return;
@@ -673,9 +678,10 @@ MixingGroup.prototype._tick = function () {
   if (mode === MODE_MANUAL) {
     var manual = U.clamp(U.toNum(dev[this._c('position_cmd')]) || 0, 0, 100);
     // Даже в ручном режиме предел перегрева работает
-    if (tMix > this.tMax) manual = 0;
+    var overheat = tMix > this.tMax;
     this._setState(this.act.isBusy() ? 'calibrating' : 'manual');
-    this.act.apply(manual, this.periodMs);
+    if (overheat) this._forceClose();
+    else this.act.apply(manual, this.periodMs);
     this.pid.bumplessReset(this.act.getPosition(), this.ff);
     this._demand(true);
     this._finish(now);
@@ -725,7 +731,7 @@ MixingGroup.prototype._tick = function () {
   if (this.limitActive) {
     this._alarm('overheat', 'перегрев подачи: ' + U.round(tMix, 1) + ' °C, клапан закрыт');
     this._setState('limit');
-    this.act.apply(0, this.periodMs);
+    this._forceClose();
     // Интегратор подтягиваем к нулю, чтобы после снятия перегрева
     // клапан не рванул обратно
     this.pid.bumplessReset(0, 0);
@@ -823,6 +829,22 @@ MixingGroup.prototype._tick = function () {
   this._demand(true);
   this._antiStick(now);
   this._finish(now);
+};
+
+/**
+ * Закрыть клапан по защите, прервав ход на открытие.
+ *
+ * apply() не принимает команд, пока идёт калибровка или импульс, —
+ * возвращает 'calibrate' / 'busy'. Для регулирования это правильно,
+ * для защиты — нет: плановая рекалибровка к верхнему упору и
+ * антизалипание гонят клапан на полное открытие с перебегом 20 %
+ * (144 с при ходе 120 с), и всё это время перегрев или аварийный
+ * термостат не могли бы его остановить.
+ * Ход на закрытие не прерываем — он и так делает то, что нужно.
+ */
+MixingGroup.prototype._forceClose = function () {
+  if (this.act.isOpening && this.act.isOpening()) this.act.halt();
+  this.act.apply(0, this.periodMs);
 };
 
 MixingGroup.prototype._setState = function (s) {

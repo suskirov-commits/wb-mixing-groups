@@ -318,6 +318,78 @@ check('запущена калибровка', st() === 'Калибровка п
 advance(200);
 check('после калибровки положение снова достоверно', g.act.isPositionTrusted() === true);
 
+console.log('\n12. Перегрев прерывает прогон на открытие');
+// Плановая рекалибровка к верхнему упору и антизалипание гонят клапан
+// на полное открытие с перебегом 20 %. Раньше apply() в это время
+// отвечал 'calibrate' и команду закрыть не принимал — защита была слепа.
+advance(30);
+g.act.calibrate(1, null);
+check('идёт прогон на открытие', store[OPEN] === true);
+setDev(T_MIX, 47);
+advance(10);
+check('перегрев снял команду «открыть»', store[OPEN] === false);
+check('клапан пошёл на закрытие', store[CLOSE] === true, 'close=' + store[CLOSE]);
+check('состояние «ограничение по перегреву»', st() === 'Ограничение по перегреву', st());
+setDev(T_MIX, 35);
+advance(200);
+
+console.log('\n13. Аварийный термостат прерывает прогон на открытие');
+g.act.calibrate(1, null);
+check('идёт прогон на открытие', store[OPEN] === true);
+setDev(EMG, true);
+advance(10);
+check('термостат снял команду «открыть»', store[OPEN] === false);
+check('клапан пошёл на закрытие', store[CLOSE] === true, 'close=' + store[CLOSE]);
+setDev(EMG, false);
+advance(200);
+
+console.log('\n14. Ход на закрытие защита не прерывает');
+g.act.calibrate(-1, null);
+setDev(T_MIX, 47);
+advance(10);
+check('прогон на закрытие продолжается', g.act.calibrating === true && store[CLOSE] === true);
+setDev(T_MIX, 35);
+advance(200);
+
+console.log('\n15. Летнее отключение');
+// Тёплый пол на грунте работает круглый год. Раньше отключить лето
+// было нельзя: U.def() превращал summerCutoff: null в 16.
+const T_OUT = 's/out';
+meta[T_OUT + '#error'] = '';
+store[T_OUT] = 25;
+function summerGroup(id, curve) {
+  const out = 'ao/' + id;
+  meta[out + '#error'] = '';
+  store[out] = 0;
+  GROUP.create({
+    id,
+    title: id,
+    defaultEnabled: true,
+    defaultMode: 1,
+    defaultSetpoint: 35,
+    sensors: { supplyIn: T_IN, supplyOut: T_MIX, outdoor: T_OUT, tau: 0 },
+    actuator: { type: 'analog', out },
+    control: { period: 10 },
+    curve
+  });
+}
+summerGroup('sm_def', {});
+summerGroup('sm_off', { summerShutdown: false });
+summerGroup('sm_null', { summerCutoff: null });
+advance(30);
+check('по умолчанию при +25 °C на улице — «лето»', store['sm_def/state'] === 'Лето (отключен)', store['sm_def/state']);
+setDev('sm_def/mode', 0);
+setDev('sm_def/position_cmd', 50);
+advance(20);
+check('в «лете» не работает и ручной режим', store['ao/sm_def'] === 0, String(store['ao/sm_def']));
+const offState = store['sm_off/state'];
+check('с summerShutdown: false контур работает', offState !== 'Лето (отключен)' && offState !== 'Выключен', offState);
+check('summerCutoff: null тоже выключает лето', store['sm_null/state'] !== 'Лето (отключен)', store['sm_null/state']);
+setDev('sm_off/mode', 0);
+setDev('sm_off/position_cmd', 50);
+advance(20);
+check('без летнего отключения работает и ручной режим', store['ao/sm_off'] === 5000, String(store['ao/sm_off']));
+
 console.log('\n--- ИТОГО: ' + pass + ' пройдено, ' + fail + ' провалено ---\n');
 if (fail) {
   console.log('Лог:');

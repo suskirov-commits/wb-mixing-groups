@@ -112,6 +112,12 @@ var CONFIG = {
         "supplyDesign": 35,          // проектная подача при outdoorDesign
         "returnDesign": 28,          // проектная обратка
         "exponent": 1.1,             // 1.1 — тёплый пол
+        // Летнее отключение. Для пола на грунте, который должен работать
+        // круглый год (иначе плита остывает от земли), ставьте false.
+        // Действует во всех режимах, включая ручной. В режиме кривой при
+        // улице теплее комнаты уставка опускается до setpointMin — это
+        // и есть «летний» режим: плита тёплая, дом не перегревается.
+        "summerShutdown": true,
         "summerCutoff": 16,
         "summerHyst": 2,
         "roomGain": 2
@@ -615,6 +621,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
      *   .halt()                   -> немедленно снять команды (аварии, выключение)
      *   .calibrate(dir, cb)       -> прогон на упор, dir: -1 закрыть, +1 открыть
      *   .isBusy()                 -> идёт калибровка/движение
+     *   .isOpening()              -> идёт или вот-вот начнётся ход на открытие
      *   .stats()                  -> диагностика
      */
 
@@ -672,6 +679,10 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       this.moving = 0; // -1 закрытие, 0 стоп, +1 открытие
       this.moveStart = 0;
       this.moveTimer = null;
+      // Старт хода откладывается на паузу реверса. Таймер обязан храниться:
+      // halt(), пришедший в эту паузу, должен отменить включение реле.
+      this.startTimer = null;
+      this.pendingDir = 0; // направление отложенного старта
       this.pinTo = null; // куда «прибить» позицию по завершении прогона
       this.travelAcc = 0; // накопленный ход, %
       this.calibrating = false;
@@ -761,7 +772,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       // Прерываем текущий ход: учитываем пройденное и пытаемся снять команды.
       // Попытка записи, скорее всего, не пройдёт — это нормально, модуль
       // обесточит выходы сам по таймеру безопасного режима.
-      if (this.moving !== 0 || this.calibrating) this.halt();
+      if (this.isBusy()) this.halt();
     };
 
     TristateActuator.prototype.getFault = function () {
@@ -792,22 +803,34 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
         clearTimeout(this.moveTimer);
         this.moveTimer = null;
       }
+      if (this.startTimer !== null) {
+        clearTimeout(this.startTimer);
+        this.startTimer = null;
+      }
+      this.pendingDir = 0;
     };
 
     TristateActuator.prototype.halt = function () {
       this._settle();
+      // pinTo сбрасываем до колбэка: колбэк калибровки может сразу запустить
+      // новый прогон (антизалипание: открыть -> закрыть), и сброс после него
+      // затёр бы pinTo уже нового хода — позиция не прибилась бы к упору.
+      this.pinTo = null;
       if (this.calibrating) {
         this.calibrating = false;
         var cb = this.calCb;
         this.calCb = null;
         if (cb) cb(false);
       }
-      this.pinTo = null;
       this._save();
     };
 
     TristateActuator.prototype.isBusy = function () {
-      return this.calibrating || this.moving !== 0;
+      return this.calibrating || this.moving !== 0 || this.pendingDir !== 0;
+    };
+
+    TristateActuator.prototype.isOpening = function () {
+      return this.moving > 0 || this.pendingDir > 0;
     };
 
     TristateActuator.prototype.getPosition = function () {
@@ -835,6 +858,8 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       this._settle(); // снимаем обе команды и учитываем пройденное
 
       var start = function () {
+        self.startTimer = null;
+        self.pendingDir = 0;
         self._writeRelay(self._topicFor(dir), true);
         self.moving = dir;
         self.moveStart = Date.now();
@@ -861,8 +886,10 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
 
       // Пауза на реверс: контакторы/симисторы не должны переключаться
       // мгновенно, иначе бросок тока и износ привода.
-      if (this.interlockMs > 0) setTimeout(start, this.interlockMs);
-      else start();
+      if (this.interlockMs > 0) {
+        this.pendingDir = dir;
+        this.startTimer = setTimeout(start, this.interlockMs);
+      } else start();
     };
 
     /**
@@ -893,7 +920,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
     TristateActuator.prototype.apply = function (target, budgetMs) {
       if (!this._checkLink()) return 'link_fault';
       if (this.calibrating) return 'calibrate';
-      if (this.moving !== 0) return 'busy';
+      if (this.moving !== 0 || this.pendingDir !== 0) return 'busy';
 
       target = U.clamp(target, this.posMin, this.posMax);
 
@@ -1014,6 +1041,10 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
     };
 
     AnalogActuator.prototype.isBusy = function () {
+      return false;
+    };
+
+    AnalogActuator.prototype.isOpening = function () {
       return false;
     };
 
@@ -1245,6 +1276,11 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
         tSupDesign: U.def(w.supplyDesign, 35),
         tRetDesign: U.def(w.returnDesign, 28),
         n: U.def(w.exponent, 1.1),
+        // Летнее отключение выключаемо: тёплый пол на грунте работает круглый
+        // год, иначе плита остывает от земли. Явный null в summerCutoff тоже
+        // означает «выключено» — так задумывалось изначально, но U.def()
+        // превращал null в 16, и отключить лето было невозможно.
+        summerShutdown: w.summerShutdown !== false && w.summerCutoff !== null,
         summerCutoff: U.def(w.summerCutoff, 16),
         summerHyst: U.def(w.summerHyst, 2),
         roomGain: U.def(w.roomGain, 2)
@@ -1722,7 +1758,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       }
 
       // Летнее отключение по наружной температуре
-      if (this.sOut.ok() && this.curve.summerCutoff !== null) {
+      if (this.curve.summerShutdown && this.sOut.ok()) {
         if (!this.summer && this.sOut.value > this.curve.summerCutoff) this.summer = true;
         else if (this.summer && this.sOut.value < this.curve.summerCutoff - this.curve.summerHyst)
           this.summer = false;
@@ -1748,7 +1784,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       // 3.2 Внешняя авария
       if (emergency) {
         this._setState('fault');
-        this.act.apply(0, this.periodMs);
+        this._forceClose();
         this._pump(true, now); // насос гоняем, чтобы снять тепло с контура
         this._finish(now);
         return;
@@ -1787,9 +1823,10 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       if (mode === MODE_MANUAL) {
         var manual = U.clamp(U.toNum(dev[this._c('position_cmd')]) || 0, 0, 100);
         // Даже в ручном режиме предел перегрева работает
-        if (tMix > this.tMax) manual = 0;
+        var overheat = tMix > this.tMax;
         this._setState(this.act.isBusy() ? 'calibrating' : 'manual');
-        this.act.apply(manual, this.periodMs);
+        if (overheat) this._forceClose();
+        else this.act.apply(manual, this.periodMs);
         this.pid.bumplessReset(this.act.getPosition(), this.ff);
         this._demand(true);
         this._finish(now);
@@ -1839,7 +1876,7 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       if (this.limitActive) {
         this._alarm('overheat', 'перегрев подачи: ' + U.round(tMix, 1) + ' °C, клапан закрыт');
         this._setState('limit');
-        this.act.apply(0, this.periodMs);
+        this._forceClose();
         // Интегратор подтягиваем к нулю, чтобы после снятия перегрева
         // клапан не рванул обратно
         this.pid.bumplessReset(0, 0);
@@ -1937,6 +1974,22 @@ if (!global.__proto__.__wbmixShared) global.__proto__.__wbmixShared = {};
       this._demand(true);
       this._antiStick(now);
       this._finish(now);
+    };
+
+    /**
+     * Закрыть клапан по защите, прервав ход на открытие.
+     *
+     * apply() не принимает команд, пока идёт калибровка или импульс, —
+     * возвращает 'calibrate' / 'busy'. Для регулирования это правильно,
+     * для защиты — нет: плановая рекалибровка к верхнему упору и
+     * антизалипание гонят клапан на полное открытие с перебегом 20 %
+     * (144 с при ходе 120 с), и всё это время перегрев или аварийный
+     * термостат не могли бы его остановить.
+     * Ход на закрытие не прерываем — он и так делает то, что нужно.
+     */
+    MixingGroup.prototype._forceClose = function () {
+      if (this.act.isOpening && this.act.isOpening()) this.act.halt();
+      this.act.apply(0, this.periodMs);
     };
 
     MixingGroup.prototype._setState = function (s) {

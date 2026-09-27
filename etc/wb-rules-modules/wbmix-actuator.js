@@ -24,6 +24,7 @@
  *   .halt()                   -> немедленно снять команды (аварии, выключение)
  *   .calibrate(dir, cb)       -> прогон на упор, dir: -1 закрыть, +1 открыть
  *   .isBusy()                 -> идёт калибровка/движение
+ *   .isOpening()              -> идёт или вот-вот начнётся ход на открытие
  *   .stats()                  -> диагностика
  */
 
@@ -81,6 +82,10 @@ function TristateActuator(cfg, ctx) {
   this.moving = 0; // -1 закрытие, 0 стоп, +1 открытие
   this.moveStart = 0;
   this.moveTimer = null;
+  // Старт хода откладывается на паузу реверса. Таймер обязан храниться:
+  // halt(), пришедший в эту паузу, должен отменить включение реле.
+  this.startTimer = null;
+  this.pendingDir = 0; // направление отложенного старта
   this.pinTo = null; // куда «прибить» позицию по завершении прогона
   this.travelAcc = 0; // накопленный ход, %
   this.calibrating = false;
@@ -170,7 +175,7 @@ TristateActuator.prototype._setLinkFault = function (reason) {
   // Прерываем текущий ход: учитываем пройденное и пытаемся снять команды.
   // Попытка записи, скорее всего, не пройдёт — это нормально, модуль
   // обесточит выходы сам по таймеру безопасного режима.
-  if (this.moving !== 0 || this.calibrating) this.halt();
+  if (this.isBusy()) this.halt();
 };
 
 TristateActuator.prototype.getFault = function () {
@@ -201,22 +206,34 @@ TristateActuator.prototype._settle = function () {
     clearTimeout(this.moveTimer);
     this.moveTimer = null;
   }
+  if (this.startTimer !== null) {
+    clearTimeout(this.startTimer);
+    this.startTimer = null;
+  }
+  this.pendingDir = 0;
 };
 
 TristateActuator.prototype.halt = function () {
   this._settle();
+  // pinTo сбрасываем до колбэка: колбэк калибровки может сразу запустить
+  // новый прогон (антизалипание: открыть -> закрыть), и сброс после него
+  // затёр бы pinTo уже нового хода — позиция не прибилась бы к упору.
+  this.pinTo = null;
   if (this.calibrating) {
     this.calibrating = false;
     var cb = this.calCb;
     this.calCb = null;
     if (cb) cb(false);
   }
-  this.pinTo = null;
   this._save();
 };
 
 TristateActuator.prototype.isBusy = function () {
-  return this.calibrating || this.moving !== 0;
+  return this.calibrating || this.moving !== 0 || this.pendingDir !== 0;
+};
+
+TristateActuator.prototype.isOpening = function () {
+  return this.moving > 0 || this.pendingDir > 0;
 };
 
 TristateActuator.prototype.getPosition = function () {
@@ -244,6 +261,8 @@ TristateActuator.prototype._run = function (dir, ms, pinTo) {
   this._settle(); // снимаем обе команды и учитываем пройденное
 
   var start = function () {
+    self.startTimer = null;
+    self.pendingDir = 0;
     self._writeRelay(self._topicFor(dir), true);
     self.moving = dir;
     self.moveStart = Date.now();
@@ -270,8 +289,10 @@ TristateActuator.prototype._run = function (dir, ms, pinTo) {
 
   // Пауза на реверс: контакторы/симисторы не должны переключаться
   // мгновенно, иначе бросок тока и износ привода.
-  if (this.interlockMs > 0) setTimeout(start, this.interlockMs);
-  else start();
+  if (this.interlockMs > 0) {
+    this.pendingDir = dir;
+    this.startTimer = setTimeout(start, this.interlockMs);
+  } else start();
 };
 
 /**
@@ -302,7 +323,7 @@ TristateActuator.prototype.calibrate = function (dir, cb) {
 TristateActuator.prototype.apply = function (target, budgetMs) {
   if (!this._checkLink()) return 'link_fault';
   if (this.calibrating) return 'calibrate';
-  if (this.moving !== 0) return 'busy';
+  if (this.moving !== 0 || this.pendingDir !== 0) return 'busy';
 
   target = U.clamp(target, this.posMin, this.posMax);
 
@@ -423,6 +444,10 @@ AnalogActuator.prototype.isPositionTrusted = function () {
 };
 
 AnalogActuator.prototype.isBusy = function () {
+  return false;
+};
+
+AnalogActuator.prototype.isOpening = function () {
   return false;
 };
 

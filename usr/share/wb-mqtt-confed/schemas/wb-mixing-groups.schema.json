@@ -1031,6 +1031,17 @@
                 "grid_columns": 4
               }
             },
+            "summerShutdown": {
+              "type": "boolean",
+              "title": "curveSummerShutdownTitle",
+              "description": "curveSummerShutdownDescription",
+              "default": true,
+              "_format": "checkbox",
+              "propertyOrder": 7,
+              "options": {
+                "grid_columns": 4
+              }
+            },
             "summerCutoff": {
               "type": "number",
               "title": "curveSummerTitle",
@@ -1038,7 +1049,7 @@
               "minimum": 5,
               "maximum": 30,
               "default": 16,
-              "propertyOrder": 7,
+              "propertyOrder": 8,
               "options": {
                 "grid_columns": 4
               }
@@ -1049,7 +1060,7 @@
               "minimum": 0.5,
               "maximum": 10,
               "default": 2,
-              "propertyOrder": 8,
+              "propertyOrder": 9,
               "options": {
                 "grid_columns": 4
               }
@@ -1213,7 +1224,7 @@
       "safDevDescription": "Detects clogged filter, seized valve, air, failed pump",
       "safDevDelayTitle": "Deviation alarm delay, s",
       "curveTitle": "Weather curve",
-      "curveDescription": "Used in the weather curve mode. Slope and shift can be trimmed live from the device page.",
+      "curveDescription": "Curve settings are used in the weather curve mode; summer shutdown applies in every mode. Slope and shift can be trimmed live from the device page.",
       "curveRoomTitle": "Design room temp, °C",
       "curveRoomDescription": "Comfort temperature",
       "curveOutDesignTitle": "Design outdoor temp, °C",
@@ -1225,8 +1236,10 @@
       "curveExpDescription": "1.1 underfloor, 1.3 steel/aluminium radiators, 1.4 convectors",
       "curveRoomGainTitle": "Room correction, K/K",
       "curveRoomGainDescription": "Only used when a room sensor is set",
-      "curveSummerTitle": "Summer cutoff, °C",
-      "curveSummerDescription": "Circuit is disabled above this outdoor temperature",
+      "curveSummerTitle": "Summer threshold, °C",
+      "curveSummerDescription": "Circuit is disabled above this outdoor temperature. Requires an outdoor sensor",
+      "curveSummerShutdownTitle": "Summer shutdown",
+      "curveSummerShutdownDescription": "Untick for underfloor heating that must run all year round. Applies in every mode, including manual",
       "curveSummerHystTitle": "Summer hysteresis, K",
       "actPosMinTitle": "Min position, %",
       "actPosMinDescription": "Mechanical travel limits, leave 0 and 100 unless the valve must not fully close",
@@ -1358,7 +1371,7 @@
       "safDevDescription": "Ловит засор фильтра, закисший кран, воздух в контуре, отказ насоса",
       "safDevDelayTitle": "Задержка аварии, с",
       "curveTitle": "Погодозависимая кривая",
-      "curveDescription": "Работает в режиме кривой. Наклон и сдвиг подстраиваются на лету на странице устройства.",
+      "curveDescription": "Параметры кривой работают в режиме кривой, летнее отключение — во всех режимах. Наклон и сдвиг подстраиваются на лету на странице устройства.",
       "curveRoomTitle": "Расчётная температура помещения, °C",
       "curveRoomDescription": "Комфортная температура",
       "curveOutDesignTitle": "Расчётная температура улицы, °C",
@@ -1370,8 +1383,10 @@
       "curveExpDescription": "1.1 тёплый пол, 1.3 стальные и алюминиевые радиаторы, 1.4 конвекторы",
       "curveRoomGainTitle": "Коррекция по помещению, К/К",
       "curveRoomGainDescription": "Работает только если задан датчик помещения",
-      "curveSummerTitle": "Летнее отключение, °C",
-      "curveSummerDescription": "Выше этой температуры на улице контур отключается",
+      "curveSummerTitle": "Порог лета, °C",
+      "curveSummerDescription": "Выше этой температуры на улице контур отключается. Нужен датчик улицы",
+      "curveSummerShutdownTitle": "Летнее отключение",
+      "curveSummerShutdownDescription": "Снимите для тёплого пола, который должен работать круглый год. Действует во всех режимах, включая ручной",
       "curveSummerHystTitle": "Гистерезис лета, К",
       "actPosMinTitle": "Мин. положение, %",
       "actPosMinDescription": "Механическое ограничение хода. Оставьте 0 и 100, если кран не должен оставаться приоткрытым.",

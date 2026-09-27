@@ -133,6 +133,19 @@ const analogMin = {
 };
 check('конфиг с приводом 0-10 В валиден', validate(analogMin), JSON.stringify((validate.errors || [])[0]));
 
+const yearRound = {
+  groups: [
+    {
+      id: 'mix_floor',
+      title: 'Тёплый пол круглый год',
+      sensors: { supplyIn: 'a/b', supplyOut: 'c/d', outdoor: 'e/f' },
+      actuator: { type: 'tristate', open: 'r/1', close: 'r/2', travelTime: 120 },
+      curve: { summerShutdown: false }
+    }
+  ]
+};
+check('конфиг с выключенным летним отключением валиден', validate(yearRound), JSON.stringify((validate.errors || [])[0]));
+
 const noSensor = { groups: [{ id: 'x', title: 'x', sensors: { supplyIn: 'a/b' }, actuator: { type: 'analog', out: 'a/b' } }] };
 check('конфиг без обязательного датчика отклоняется', !validate(noSensor));
 
