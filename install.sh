@@ -292,13 +292,17 @@ do_uninstall() {
   rm -f "$BIN_DIR/wbmix-update"
   rm -rf "$SHARE_DIR"
   ok "файлы удалены"
+  # Тот же postrm, что у пакета: перезапустить wb-rules и убрать карточки
+  # узлов из веб-интерфейса. До удаления конфигурации — узлы берутся из неё.
+  if real_system && [ -f "$SRC/debian/postrm" ]; then
+    sh "$SRC/debian/postrm" remove || true
+  fi
   if [ "$purge" = purge ]; then
     rm -f "$CONF" "$CONF.new"
     ok "конфигурация удалена"
   else
     say "конфигурация ${CONF#$ROOT} оставлена (--purge чтобы удалить)"
   fi
-  real_system && systemctl restart wb-rules || true
   ok "готово"
 }
 

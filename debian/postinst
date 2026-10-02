@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# postinst пакета wb-mixing-groups: после установки и обновления
+# перезапустить wb-rules (новые модули) и wb-mqtt-confed (новая схема).
+
+set -e
+
+if [ "$1" = configure ]; then
+  deb-systemd-invoke restart wb-rules >/dev/null 2>&1 ||
+    systemctl restart wb-rules >/dev/null 2>&1 || true
+  systemctl try-restart wb-mqtt-confed >/dev/null 2>&1 || true
+fi
+
+exit 0

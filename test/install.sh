@@ -133,7 +133,49 @@ run --purge
 check "конфигурация удалена" "$(missing "$CONF")"
 
 echo ""
-echo "8. Синтаксис и deb-пакет"
+echo "8. Удаление пакета: postrm"
+# wb-rules не убирает retained-топики устройств удалённого скрипта, и
+# карточки узлов оставались в веб-интерфейсе после удаления пакета.
+# postrm при remove перезапускает wb-rules и чистит топики узлов из конфига.
+STUB="$SANDBOX/stub"
+LOG="$SANDBOX/calls.log"
+mkdir -p "$STUB" "$SANDBOX/etc"
+stub() { printf '#!/bin/sh\necho "%s $*" >>"%s"\nexit %s\n' "$1" "$LOG" "$2" >"$STUB/$1" && chmod +x "$STUB/$1"; }
+stub systemctl 0
+stub mosquitto_sub 0
+cat >"$CONF" <<'EOF'
+{
+  "groups": [
+    { "id": "mix_floor", "title": "Пол" },
+    { "id": "mix_rad", "title": "Радиаторы" },
+    { "id": "+", "title": "маска «все устройства»" },
+    { "id": "a/#", "title": "маска" }
+  ]
+}
+EOF
+postrm() {
+  : >"$LOG"
+  WBMIX_ROOT="$SANDBOX" PATH="$STUB:$PATH" sh "$SRC/debian/postrm" "$@" >"$SANDBOX/out.txt" 2>&1
+}
+postrm remove
+rc=$?
+check "postrm remove отработал без ошибок" "$([ $rc = 0 ] && echo 1 || echo 0)" "$(cat "$SANDBOX/out.txt")"
+check "работающий wb-rules перезапущен" "$(grep -qx 'systemctl try-restart wb-rules' "$LOG" && echo 1 || echo 0)" "$(cat "$LOG")"
+check "retained-топики узлов из конфига удаляются" \
+  "$(grep -qF 'mosquitto_sub -t /devices/mix_floor/# -t /devices/mix_rad/# --retained-only --remove-retained' "$LOG" && echo 1 || echo 0)" "$(cat "$LOG")"
+check "id с масками MQTT («+», «#») пропущены — чужие устройства целы" \
+  "$(grep -qE '/devices/(\+|a)/' "$LOG" && echo 0 || echo 1)" "$(cat "$LOG")"
+postrm upgrade 1.0.7
+check "при обновлении postrm ничего не трогает" "$([ ! -s "$LOG" ] && echo 1 || echo 0)" "$(cat "$LOG")"
+stub systemctl 1
+postrm remove
+check "wb-rules не перезапустился — топики не трогаем (узел опубликовал бы их заново)" \
+  "$(grep -q mosquitto_sub "$LOG" && echo 0 || echo 1)" "$(cat "$LOG")"
+sh -n "$SRC/debian/postrm" && sh -n "$SRC/debian/postinst"
+check "postinst и postrm синтаксически корректны" "$([ $? = 0 ] && echo 1 || echo 0)"
+
+echo ""
+echo "9. Синтаксис и deb-пакет"
 sh -n "$SRC/install.sh"
 check "install.sh синтаксически корректен" "$([ $? = 0 ] && echo 1 || echo 0)"
 
@@ -160,6 +202,9 @@ if command -v dpkg-deb >/dev/null 2>&1; then
     dpkg-deb -I "$DEB" postinst > "$SANDBOX/postinst" 2>/dev/null
     sh -n "$SANDBOX/postinst"
     check "postinst синтаксически корректен" "$([ $? = 0 ] && echo 1 || echo 0)"
+    dpkg-deb -I "$DEB" postrm > "$SANDBOX/postrm" 2>/dev/null
+    check "postinst и postrm в пакете — из debian/" \
+      "$(cmp -s "$SANDBOX/postinst" "$SRC/debian/postinst" && cmp -s "$SANDBOX/postrm" "$SRC/debian/postrm" && echo 1 || echo 0)"
   fi
 else
   echo "  (dpkg-deb недоступен, проверка пакета пропущена)"

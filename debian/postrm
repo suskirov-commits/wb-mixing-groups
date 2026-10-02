@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# postrm пакета wb-mixing-groups.
+#
+# При удалении (remove; purge приходит уже после него):
+#
+#   1. Перезапустить wb-rules, если он запущен. Иначе нет гарантии, что
+#      загруженный в память цикл регулирования остановится до следующего
+#      перезапуска.
+#   2. Убрать из брокера сохранённые (retained) топики устройств узлов.
+#      wb-rules этого не делает: после удаления пакета карточки узлов
+#      оставались в веб-интерфейсе с последними значениями.
+#
+# Узлы берутся из конфигурации — при remove она ещё на месте.
+# При обновлении (upgrade) ничего не делаем: wb-rules перезапускает postinst.
+#
+# POSIX sh: на контроллере это dash. WBMIX_ROOT — песочница автотестов.
+
+set -e
+
+CONF="${WBMIX_ROOT:-}/etc/wb-mixing-groups.conf"
+
+# id узлов из конфигурации. Пропускаем только безопасные для MQTT символы:
+# id с «+» или «#» стал бы маской подписки и стёр бы чужие устройства.
+group_ids() {
+  [ -r "$CONF" ] || return 0
+  grep -o '"id"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONF" |
+    sed 's/.*"\([^"]*\)"$/\1/' |
+    grep -E '^[0-9A-Za-z_-]+$' || true
+}
+
+# Перезапускаем только работающий wb-rules: остановленный не трогаем.
+restart_rules() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  systemctl try-restart wb-rules >/dev/null 2>&1
+}
+
+# --remove-retained отвечает на каждое сохранённое сообщение пустым
+# retained — брокер его удаляет. После перезапуска wb-rules топики узлов
+# никто не публикует, приходят только сохранённые; -W ограничивает ожидание.
+clear_devices() {
+  command -v mosquitto_sub >/dev/null 2>&1 || return 0
+  set --
+  for id in $(group_ids); do
+    set -- "$@" -t "/devices/$id/#"
+  done
+  [ $# -gt 0 ] || return 0
+  echo "wb-mixing-groups: убираю карточки узлов из веб-интерфейса: $(group_ids | tr '\n' ' ')"
+  # По -W mosquitto_sub выходит с ошибкой всегда — код возврата ничего
+  # не говорит об успехе очистки.
+  mosquitto_sub "$@" --retained-only --remove-retained -W 3 >/dev/null 2>&1 || true
+}
+
+case "$1" in
+  remove)
+    # Чистить топики можно только после перезапуска: работающий узел
+    # опубликовал бы их заново.
+    if restart_rules; then
+      clear_devices
+    fi
+    ;;
+esac
+
+exit 0

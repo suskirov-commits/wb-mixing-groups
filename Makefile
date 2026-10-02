@@ -58,7 +58,9 @@ purge:
 #
 # Пакет собирается без dh — дерево готовится вручную и упаковывается
 # dpkg-deb. Для нашего случая этого достаточно: архитектурно-независимые
-# файлы, один конфиг и один postinst.
+# файлы, один конфиг и два скрипта из debian/: postinst перезапускает
+# wb-rules после установки, postrm при удалении перезапускает его и убирает
+# карточки узлов из веб-интерфейса.
 #
 # Ключевое — /etc/wb-mixing-groups.conf объявлен в conffiles. Это значит,
 # что dpkg при обновлении НЕ затрёт изменённый на объекте конфиг: если
@@ -97,14 +99,7 @@ deb: clean
 	@printf ' Supports three-point (floating) and 0-10V actuators.\n' >> $(BUILD)/DEBIAN/control
 	@printf ' Settings page is provided via wb-mqtt-confed schema.\n' >> $(BUILD)/DEBIAN/control
 	@printf '/etc/wb-mixing-groups.conf\n'                  >  $(BUILD)/DEBIAN/conffiles
-	@printf '#!/bin/sh\nset -e\n'                           >  $(BUILD)/DEBIAN/postinst
-	@printf 'if [ "$$1" = configure ]; then\n'              >> $(BUILD)/DEBIAN/postinst
-	@printf '  deb-systemd-invoke restart wb-rules >/dev/null 2>&1 || \\\n' >> $(BUILD)/DEBIAN/postinst
-	@printf '    systemctl restart wb-rules >/dev/null 2>&1 || true\n' >> $(BUILD)/DEBIAN/postinst
-	@printf '  systemctl try-restart wb-mqtt-confed >/dev/null 2>&1 || true\n' >> $(BUILD)/DEBIAN/postinst
-	@printf 'fi\nexit 0\n'                                  >> $(BUILD)/DEBIAN/postinst
-	@printf '#!/bin/sh\nset -e\nexit 0\n'                   >  $(BUILD)/DEBIAN/postrm
-	@chmod 0755 $(BUILD)/DEBIAN/postinst $(BUILD)/DEBIAN/postrm
+	@install -m 0755 debian/postinst debian/postrm $(BUILD)/DEBIAN/
 	@dpkg-deb -Zgzip --root-owner-group --build $(BUILD) $(DEB) >/dev/null
 	@ar t $(DEB) | grep -qxF control.tar.gz || { echo 'ОШИБКА: control.tar не gzip, на контроллере не поставится'; exit 1; }
 	@ar t $(DEB) | grep -qxF data.tar.gz    || { echo 'ОШИБКА: data.tar не gzip, на контроллере не поставится'; exit 1; }
